@@ -4,6 +4,7 @@
 {% block head_extra %}{% include "tracker/includes/theme_overrides.html" %}{% endblock %}
 {% block page_title %}Wassertracking{% endblock %}
 {% block page_subtitle %}Tägliche Flüssigkeitsaufnahme, Ziel &amp; Bedarf im Blick{% endblock %}
+{% block table_title %}<i class="bi bi-droplet me-2"></i>Wassereinträge{% endblock %}
 
 {% block page_actions %}
 <button type="button" class="btn btn-primary" onclick="openWaterCreateModal()">
@@ -15,25 +16,14 @@
 {% endblock %}
 
 {% block page_kpi_strip %}
-<div class="row g-3 mb-4">
-    <div class="col-md-4">
-        <div class="card shadow-sm p-3">
-            <div class="small text-muted">Heute getrunken</div>
-            <div class="fs-4 fw-bold font-monospace">{{ today_water_ml }} ml</div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card shadow-sm p-3">
-            <div class="small text-muted">Tagesziel</div>
-            <div class="fs-4 fw-bold font-monospace">{{ water_goal_ml }} ml</div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card shadow-sm p-3">
-            <div class="small text-muted">Empfohlener Bedarf (~35 ml/kg)</div>
-            <div class="fs-4 fw-bold font-monospace">{% if recommended_water_ml %}{{ recommended_water_ml }} ml{% else %}–{% endif %}</div>
-        </div>
-    </div>
+<div class="kpi-bento-grid mb-4">
+    {% include "design_studio/components/kpi_card.html" with card_id="w_today" title="Heute getrunken" value=today_water_ml unit="ml" icon="bi-droplet-fill" size="sm" accent="#0dcaf0" subtitle="Aktueller Tag" %}
+    {% include "design_studio/components/kpi_card.html" with card_id="w_goal" title="Tagesziel" value=water_goal_ml unit="ml" icon="bi-bullseye" size="sm" accent="#0d6efd" subtitle="Im Profil konfigurierbar" %}
+    {% if recommended_water_ml %}
+        {% include "design_studio/components/kpi_card.html" with card_id="w_need" title="Empfohlener Bedarf" value=recommended_water_ml unit="ml" icon="bi-heart-pulse" size="sm" accent="#198754" subtitle="Richtwert (~35 ml/kg)" %}
+    {% else %}
+        {% include "design_studio/components/kpi_card.html" with card_id="w_need" title="Empfohlener Bedarf" value="–" unit="ml" icon="bi-heart-pulse" size="sm" accent="#198754" subtitle="Gewicht im Profil hinterlegen" %}
+    {% endif %}
 </div>
 {% endblock %}
 

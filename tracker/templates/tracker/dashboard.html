@@ -108,9 +108,9 @@
     </div>
 </div>
 <div class="col-lg-6">
-    <div class="card shadow-sm h-100">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <span class="fw-semibold"><i class="bi bi-activity me-2"></i>Gewichtsverlauf ({{ days_count }} Tage)</span>
+    <div class="card shadow-sm rounded-4 overflow-hidden h-100">
+        <div class="card-header border-0 py-2 px-3 d-flex justify-content-between align-items-center">
+            <span class="fw-bold"><i class="bi bi-activity me-2"></i>Gewichtsverlauf ({{ days_count }} Tage)</span>
             <a href="{% url 'tracker:weights_list' %}" class="btn btn-sm btn-outline-secondary">Alle</a>
         </div>
         <div class="card-body">
@@ -119,9 +119,9 @@
     </div>
 </div>
 <div class="col-lg-6">
-    <div class="card shadow-sm h-100">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <span class="fw-semibold"><i class="bi bi-fire me-2"></i>Makros, Ballaststoffe &amp; Zielkalorien ({{ days_count }} Tage)</span>
+    <div class="card shadow-sm rounded-4 overflow-hidden h-100">
+        <div class="card-header border-0 py-2 px-3 d-flex justify-content-between align-items-center">
+            <span class="fw-bold"><i class="bi bi-fire me-2"></i>Makros, Ballaststoffe &amp; Zielkalorien ({{ days_count }} Tage)</span>
             <a href="{% url 'tracker:meals_list' %}" class="btn btn-sm btn-outline-secondary">Alle</a>
         </div>
         <div class="card-body">
@@ -130,9 +130,9 @@
     </div>
 </div>
 <div class="col-12">
-    <div class="card shadow-sm">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <span class="fw-semibold"><i class="bi bi-smartwatch me-2"></i>Bewegung über die Zeit ({{ days_count }} Tage) <span class="text-muted small fw-normal">(Balken anklicken zum Ändern)</span></span>
+    <div class="card shadow-sm rounded-4 overflow-hidden">
+        <div class="card-header border-0 py-2 px-3 d-flex justify-content-between align-items-center">
+            <span class="fw-bold"><i class="bi bi-smartwatch me-2"></i>Bewegung über die Zeit ({{ days_count }} Tage) <span class="text-muted small fw-normal">(Balken anklicken zum Ändern)</span></span>
             <button type="button" class="btn btn-sm btn-outline-primary" onclick="openActivityModal('{{ today|date:'Y-m-d' }}', '{{ today_activity_level }}', {{ today_activity_kcal }})">
                 <i class="bi bi-pencil me-1"></i>Ändern
             </button>
@@ -146,9 +146,9 @@
 
 {% block dashboard_tables %}
 <div class="col-lg-7">
-    <div class="card shadow-sm h-100">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <span class="fw-semibold"><i class="bi bi-egg-fried me-2"></i>Letzte Mahlzeiten</span>
+    <div class="card shadow-sm rounded-4 overflow-hidden h-100">
+        <div class="card-header border-0 py-2 px-3 d-flex justify-content-between align-items-center">
+            <span class="fw-bold"><i class="bi bi-egg-fried me-2"></i>Letzte Mahlzeiten</span>
             <a href="{% url 'tracker:meals_list' %}" class="btn btn-sm btn-outline-primary">Verwalten</a>
         </div>
         <div class="table-responsive">
@@ -180,9 +180,9 @@
     </div>
 </div>
 <div class="col-lg-5">
-    <div class="card shadow-sm h-100">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <span class="fw-semibold"><i class="bi bi-activity me-2"></i>Letzte Gewichtsmessungen</span>
+    <div class="card shadow-sm rounded-4 overflow-hidden h-100">
+        <div class="card-header border-0 py-2 px-3 d-flex justify-content-between align-items-center">
+            <span class="fw-bold"><i class="bi bi-activity me-2"></i>Letzte Gewichtsmessungen</span>
             <a href="{% url 'tracker:weights_list' %}" class="btn btn-sm btn-outline-primary">Verwalten</a>
         </div>
         <div class="table-responsive">
