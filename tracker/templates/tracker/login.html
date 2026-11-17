@@ -1,0 +1,35 @@
+{% extends "design_studio/layouts/base.html" %}
+
+{% block title %}Anmelden - {{ design_studio_app_name }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-4">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-header fw-semibold text-center">
+                <i class="bi bi-box-arrow-in-right me-2"></i>Anmelden
+            </div>
+            <div class="card-body p-4">
+                <form method="post">
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger py-2 small">{{ form.non_field_errors }}</div>
+                    {% endif %}
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ form.username.id_for_label }}">Benutzername</label>
+                        {{ form.username }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ form.password.id_for_label }}">Passwort</label>
+                        {{ form.password }}
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Anmelden</button>
+                </form>
+                <div class="text-center mt-3 small">
+                    Noch kein Konto? <a href="{% url 'tracker:register' %}">Jetzt registrieren</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

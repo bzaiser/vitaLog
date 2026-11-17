@@ -1,0 +1,69 @@
+{{ weight_chart_data|json_script:data_id }}
+<script>
+(function() {
+    const dataEl = document.getElementById("{{ data_id }}");
+    const canvas = document.getElementById("{{ canvas_id }}");
+    if (!dataEl || !canvas) return;
+
+    const d = JSON.parse(dataEl.textContent);
+    const styles = getComputedStyle(document.documentElement);
+    const primary = styles.getPropertyValue("--app-primary").trim() || "#0d6efd";
+    const bodyColor = styles.getPropertyValue("--bs-body-color").trim() || "#1e293b";
+    const successColor = styles.getPropertyValue("--bs-success").trim() || "#198754";
+
+    const datasets = [{
+        type: "line",
+        label: "Gewicht (kg)",
+        data: d.values,
+        borderColor: primary,
+        backgroundColor: primary + "22",
+        spanGaps: true,
+        tension: 0.3,
+        fill: true,
+        pointRadius: 3,
+        order: 1
+    }];
+
+    if (d.target !== null && d.target !== undefined) {
+        datasets.push({
+            type: "line",
+            label: "Zielgewicht (" + d.target + " kg)",
+            data: d.labels.map(() => d.target),
+            borderColor: successColor,
+            borderDash: [6, 4],
+            pointRadius: 0,
+            fill: false,
+            order: 0
+        });
+    }
+
+    const yScale = {
+        beginAtZero: false,
+        ticks: {
+            color: bodyColor,
+            callback: function(v) { return v + " kg"; }
+        }
+    };
+    if (d.suggested_min !== null) yScale.suggestedMin = d.suggested_min;
+    if (d.suggested_max !== null) yScale.suggestedMax = d.suggested_max;
+
+    new Chart(canvas, {
+        data: { labels: d.labels, datasets: datasets },
+        options: {
+            responsive: true,
+            interaction: { mode: "index", intersect: false },
+            plugins: {
+                legend: {
+                    display: d.target !== null && d.target !== undefined,
+                    position: "bottom",
+                    labels: { color: bodyColor, boxWidth: 12 }
+                }
+            },
+            scales: {
+                x: { ticks: { color: bodyColor } },
+                y: yScale
+            }
+        }
+    });
+})();
+</script>

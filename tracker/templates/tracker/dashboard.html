@@ -1,0 +1,197 @@
+{% extends "design_studio/layouts/dashboard.html" %}
+{% load static %}
+
+{% block title %}Dashboard - {{ design_studio_app_name }}{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}Überblick für {{ today|date:"d.m.Y" }} &middot; {{ request.user.username }}{% endblock %}
+
+{% block page_actions %}
+<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#mealModal">
+    <i class="bi bi-plus-lg me-1"></i>Mahlzeit
+</button>
+<button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#weightModal">
+    <i class="bi bi-plus-lg me-1"></i>Gewicht
+</button>
+<button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#waterModal">
+    <i class="bi bi-droplet me-1"></i>Wasser
+</button>
+<a href="{% url 'tracker:analytics' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-download me-1"></i>Auswertung &amp; Export
+</a>
+{% endblock %}
+
+{% block kpi_cards %}
+{% url 'tracker:weights_list' as weights_url %}
+{% url 'tracker:meals_list' as meals_url %}
+{% url 'tracker:water_list' as water_url %}
+{% url 'tracker:profile' as profile_url %}
+{% url 'tracker:analytics' as analytics_url %}
+
+{% if current_weight %}
+    {% with weight_val=current_weight|floatformat:1 %}
+        {% include "design_studio/components/kpi_card.html" with card_id="weight" title="Aktuelles Gewicht" value=weight_val unit="kg" icon="bi-activity" size="sm" accent="#0d6efd" target_url=weights_url sparkline_line=weight_spark_line sparkline_area=weight_spark_area subtitle="Letzte Messung" %}
+    {% endwith %}
+{% else %}
+    {% include "design_studio/components/kpi_card.html" with card_id="weight" title="Aktuelles Gewicht" value="–" unit="kg" icon="bi-activity" size="sm" accent="#0d6efd" target_url=weights_url subtitle="Noch kein Eintrag" %}
+{% endif %}
+
+{% with cal_sub="Ziel: "|add:calorie_goal|stringformat:"s"|add:" kcal" %}
+    {% include "design_studio/components/kpi_card.html" with card_id="calories" title="Tageskalorien" value=today_calories unit="kcal" icon="bi-fire" size="sm" accent="#6610f2" target_url=meals_url sparkline_line=cal_spark_line sparkline_area=cal_spark_area progress_segments=calorie_segments progress_label=calorie_ratio_pct|stringformat:"s"|add:"% vom Ziel" %}
+{% endwith %}
+
+{% include "design_studio/components/kpi_card.html" with card_id="remaining" title="Verbleibend heute" value=remaining_calories unit="kcal" icon="bi-bullseye" size="sm" accent="#198754" target_url=profile_url sparkline_line=cal_spark_line sparkline_area=cal_spark_area progress_segments=remaining_segments progress_label="Basis "|add:base_calorie_goal|stringformat:"s"|add:" + Beweg. "|add:today_activity_kcal|stringformat:"s"|add:" kcal" %}
+
+{% with fiber_val=today_fiber|floatformat:1 %}
+    {% include "design_studio/components/kpi_card.html" with card_id="fiber" title="Ballaststoffe heute" value=fiber_val unit="g" icon="bi-flower1" size="sm" accent="#20c997" target_url=meals_url sparkline_line=fiber_spark_line sparkline_area=fiber_spark_area progress_segments=fiber_segments progress_label=fiber_ratio_pct|stringformat:"s"|add:"% · Ziel "|add:fiber_goal_g|stringformat:"s"|add:" g" %}
+{% endwith %}
+
+{% if goal_progress_pct is not None %}
+    {% include "design_studio/components/kpi_card.html" with card_id="goal" title="Ziel-Fortschritt" value=goal_progress_pct unit="%" icon="bi-trophy" size="sm" accent="#fd7e14" target_url=profile_url sparkline_line=weight_spark_line sparkline_area=weight_spark_area progress_segments=goal_segments progress_label="Ziel: "|add:profile.target_weight_kg|stringformat:"s"|add:" kg" %}
+{% else %}
+    {% include "design_studio/components/kpi_card.html" with card_id="avg7d" title="7-Tage-Schnitt" value=avg_7d_calories unit="kcal" icon="bi-graph-up" size="sm" accent="#fd7e14" target_url=analytics_url sparkline_line=cal_spark_line sparkline_area=cal_spark_area progress_segments=avg7d_segments progress_label=avg7d_pct|stringformat:"s"|add:"% vom Ziel" %}
+{% endif %}
+
+{% include "design_studio/components/kpi_card.html" with card_id="water" title="Wasser heute" value=today_water_ml unit="ml" icon="bi-droplet" size="sm" accent="#0dcaf0" target_url=water_url sparkline_line=water_spark_line sparkline_area=water_spark_area progress_segments=water_segments progress_label=water_ratio_pct|stringformat:"s"|add:"% · Ziel "|add:water_goal_ml|stringformat:"s"|add:" ml" %}
+{% endblock %}
+
+{% block dashboard_charts %}
+<div class="col-12">
+    <div class="card shadow-sm">
+        <div class="card-body py-2 px-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="fw-semibold small me-1">
+                    <i class="bi bi-smartwatch me-1"></i>Bewegung heute (+{{ today_activity_kcal }} kcal):
+                </span>
+                <form method="post" action="{% url 'tracker:set_daily_activity' %}" class="d-flex flex-wrap gap-1">
+                    {% csrf_token %}
+                    <button type="submit" name="level" value="none" class="btn btn-sm {% if today_activity_level == 'none' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                        Keine (0)
+                    </button>
+                    <button type="submit" name="level" value="low" class="btn btn-sm {% if today_activity_level == 'low' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        Wenig (+{{ profile.activity_kcal_low }})
+                    </button>
+                    <button type="submit" name="level" value="medium" class="btn btn-sm {% if today_activity_level == 'medium' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        Mittel (+{{ profile.activity_kcal_medium }})
+                    </button>
+                    <button type="submit" name="level" value="high" class="btn btn-sm {% if today_activity_level == 'high' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        Hoch (+{{ profile.activity_kcal_high }})
+                    </button>
+                </form>
+            </div>
+            <form method="post" action="{% url 'tracker:set_daily_activity' %}" class="d-flex align-items-center gap-2">
+                {% csrf_token %}
+                <input type="hidden" name="level" value="custom">
+                <div class="input-group input-group-sm" style="max-width: 240px;">
+                    <span class="input-group-text" title="Apple Watch Aktivitätskalorien"><i class="bi bi-watch"></i></span>
+                    <input type="number" name="custom_kcal" min="0" step="1" class="form-control" placeholder="Apple Watch kcal" value="{% if today_activity_level == 'custom' %}{{ today_activity_kcal }}{% endif %}">
+                    <button type="submit" class="btn {% if today_activity_level == 'custom' %}btn-primary{% else %}btn-outline-primary{% endif %}">OK</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<div class="col-lg-6">
+    <div class="card shadow-sm h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span class="fw-semibold"><i class="bi bi-activity me-2"></i>Gewichtsverlauf (14 Tage)</span>
+            <a href="{% url 'tracker:weights_list' %}" class="btn btn-sm btn-outline-secondary">Alle</a>
+        </div>
+        <div class="card-body">
+            <canvas id="weightChart" height="170"></canvas>
+        </div>
+    </div>
+</div>
+<div class="col-lg-6">
+    <div class="card shadow-sm h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span class="fw-semibold"><i class="bi bi-fire me-2"></i>Makros, Ballaststoffe &amp; Zielkalorien (14 Tage)</span>
+            <a href="{% url 'tracker:meals_list' %}" class="btn btn-sm btn-outline-secondary">Alle</a>
+        </div>
+        <div class="card-body">
+            <canvas id="calorieChart" height="170"></canvas>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block dashboard_tables %}
+<div class="col-lg-7">
+    <div class="card shadow-sm h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span class="fw-semibold"><i class="bi bi-egg-fried me-2"></i>Letzte Mahlzeiten</span>
+            <a href="{% url 'tracker:meals_list' %}" class="btn btn-sm btn-outline-primary">Verwalten</a>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Datum</th>
+                        <th>Kategorie</th>
+                        <th>Mahlzeit</th>
+                        <th class="text-end">Kalorien</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for meal in recent_meals %}
+                    <tr>
+                        <td class="text-nowrap">{{ meal.date|date:"d.m.Y" }}</td>
+                        <td><span class="badge text-bg-secondary">{{ meal.get_category_display }}</span></td>
+                        <td>{{ meal.name }}</td>
+                        <td class="text-end font-monospace">{{ meal.calories }} kcal</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">Noch keine Mahlzeiten erfasst.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<div class="col-lg-5">
+    <div class="card shadow-sm h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span class="fw-semibold"><i class="bi bi-activity me-2"></i>Letzte Gewichtsmessungen</span>
+            <a href="{% url 'tracker:weights_list' %}" class="btn btn-sm btn-outline-primary">Verwalten</a>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Datum</th>
+                        <th class="text-end">Gewicht</th>
+                        <th class="text-end">KFA</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for w in recent_weights %}
+                    <tr>
+                        <td class="text-nowrap">{{ w.date|date:"d.m.Y" }}</td>
+                        <td class="text-end font-monospace fw-semibold">{{ w.weight_kg }} kg</td>
+                        <td class="text-end font-monospace">{% if w.body_fat_pct %}{{ w.body_fat_pct }} %{% else %}–{% endif %}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center text-muted py-4">Noch keine Gewichtsmessungen.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+{% url 'tracker:dashboard' as dash_next %}
+{% include "tracker/includes/meal_modal.html" with next_url=dash_next %}
+{% include "tracker/includes/weight_modal.html" with next_url=dash_next %}
+{% include "tracker/includes/water_modal.html" with next_url=dash_next %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+{% include "tracker/includes/weight_chart.html" with canvas_id="weightChart" data_id="ds-weight-chart-data" %}
+{% include "tracker/includes/macro_calorie_chart.html" with canvas_id="calorieChart" data_id="ds-macro-chart-data" %}
+{% endblock %}

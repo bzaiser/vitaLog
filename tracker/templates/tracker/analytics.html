@@ -1,0 +1,145 @@
+{% extends "design_studio/layouts/dashboard.html" %}
+
+{% block title %}Auswertungen - {{ design_studio_app_name }}{% endblock %}
+{% block page_title %}Auswertungen &amp; Export{% endblock %}
+{% block page_subtitle %}Zeitraum: {{ start_date|date:"d.m.Y" }} – {{ today|date:"d.m.Y" }} ({{ days_count }} Tage){% endblock %}
+
+{% block page_actions %}
+<div class="btn-group" role="group" aria-label="Zeitraum">
+    {% for d in "7,30,90,365"|make_list %}{% endfor %}
+    <a href="?days=7" class="btn btn-sm {% if days_count == 7 %}btn-primary{% else %}btn-outline-primary{% endif %}">7 Tage</a>
+    <a href="?days=30" class="btn btn-sm {% if days_count == 30 %}btn-primary{% else %}btn-outline-primary{% endif %}">30 Tage</a>
+    <a href="?days=90" class="btn btn-sm {% if days_count == 90 %}btn-primary{% else %}btn-outline-primary{% endif %}">90 Tage</a>
+    <a href="?days=365" class="btn btn-sm {% if days_count == 365 %}btn-primary{% else %}btn-outline-primary{% endif %}">1 Jahr</a>
+</div>
+<a href="{% url 'tracker:meals_list' %}?date_from={{ start_date|date:'Y-m-d' }}&date_to={{ today|date:'Y-m-d' }}&export=csv" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-filetype-csv me-1"></i>Mahlzeiten CSV
+</a>
+<a href="{% url 'tracker:weights_list' %}?date_from={{ start_date|date:'Y-m-d' }}&date_to={{ today|date:'Y-m-d' }}&export=csv" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-filetype-csv me-1"></i>Gewicht CSV
+</a>
+<a href="{% url 'tracker:water_list' %}?date_from={{ start_date|date:'Y-m-d' }}&date_to={{ today|date:'Y-m-d' }}&export=csv" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-filetype-csv me-1"></i>Wasser CSV
+</a>
+{% endblock %}
+
+{% block kpi_cards %}
+{% url 'tracker:meals_list' as meals_url %}
+{% url 'tracker:weights_list' as weights_url %}
+{% url 'tracker:water_list' as water_url %}
+
+{% include "design_studio/components/kpi_card.html" with card_id="a_avg" title="Ø Tageskalorien" value=avg_daily_calories unit="kcal" icon="bi-fire" size="sm" accent="#6610f2" target_url=meals_url sparkline_line=cal_spark_line sparkline_area=cal_spark_area progress_segments=avg_cal_segments progress_label=avg_cal_pct|stringformat:"s"|add:"% vom Ziel ("|add:profile.daily_calorie_goal|stringformat:"s"|add:" kcal)" %}
+{% include "design_studio/components/kpi_card.html" with card_id="a_total" title="Gesamtkalorien" value=meal_stats.total_calories|default:0 unit="kcal" icon="bi-egg-fried" size="sm" accent="#0d6efd" target_url=meals_url sparkline_line=cal_spark_line sparkline_area=cal_spark_area subtitle=meal_count|stringformat:"s"|add:" Mahlzeiten" %}
+{% if weight_delta is not None %}
+    {% with delta_val=weight_delta|floatformat:1 %}
+        {% include "design_studio/components/kpi_card.html" with card_id="a_delta" title="Gewichtsänderung" value=delta_val unit="kg" icon="bi-activity" size="sm" accent="#198754" target_url=weights_url sparkline_line=weight_spark_line sparkline_area=weight_spark_area subtitle=weight_count|stringformat:"s"|add:" Messungen" %}
+    {% endwith %}
+{% else %}
+    {% include "design_studio/components/kpi_card.html" with card_id="a_delta" title="Gewichtsänderung" value="–" unit="kg" icon="bi-activity" size="sm" accent="#198754" target_url=weights_url sparkline_line=weight_spark_line sparkline_area=weight_spark_area subtitle=weight_count|stringformat:"s"|add:" Messungen" %}
+{% endif %}
+{% with prot=meal_stats.total_protein|default:0|floatformat:0 %}
+    {% include "design_studio/components/kpi_card.html" with card_id="a_prot" title="Eiweiß gesamt" value=prot unit="g" icon="bi-pie-chart" size="sm" accent="#fd7e14" target_url=meals_url sparkline_line=prot_spark_line sparkline_area=prot_spark_area subtitle="KH: "|add:meal_stats.total_carbs|default:0|floatformat:0|add:" g · Fett: "|add:meal_stats.total_fat|default:0|floatformat:0|add:" g" %}
+{% endwith %}
+{% include "design_studio/components/kpi_card.html" with card_id="a_fiber" title="Ø Ballaststoffe / Tag" value=avg_daily_fiber unit="g" icon="bi-flower1" size="sm" accent="#20c997" target_url=meals_url sparkline_line=fiber_spark_line sparkline_area=fiber_spark_area progress_segments=avg_fiber_segments progress_label=avg_fiber_pct|stringformat:"s"|add:"% · Ziel "|add:fiber_goal_g|stringformat:"s"|add:" g" %}
+{% include "design_studio/components/kpi_card.html" with card_id="a_water" title="Ø Wasser / Tag" value=avg_daily_water_ml unit="ml" icon="bi-droplet" size="sm" accent="#0dcaf0" target_url=water_url sparkline_line=water_spark_line sparkline_area=water_spark_area progress_segments=avg_water_segments progress_label=avg_water_pct|stringformat:"s"|add:"% · Ziel "|add:water_goal_ml|stringformat:"s"|add:" ml" %}
+{% endblock %}
+
+{% block dashboard_charts %}
+<div class="col-lg-6">
+    <div class="card shadow-sm h-100">
+        <div class="card-header fw-semibold"><i class="bi bi-activity me-2"></i>Gewichtstrend</div>
+        <div class="card-body">
+            <canvas id="analyticsWeightChart" height="170"></canvas>
+        </div>
+    </div>
+</div>
+<div class="col-lg-6">
+    <div class="card shadow-sm h-100">
+        <div class="card-header fw-semibold"><i class="bi bi-bar-chart me-2"></i>Makros, Ballaststoffe &amp; Zielkalorien</div>
+        <div class="card-body">
+            <canvas id="analyticsCalorieChart" height="170"></canvas>
+        </div>
+    </div>
+</div>
+<div class="col-12">
+    <div class="card shadow-sm">
+        <div class="card-header fw-semibold"><i class="bi bi-droplet me-2"></i>Wasseraufnahme (ml) vs. Ziel</div>
+        <div class="card-body">
+            <canvas id="analyticsWaterChart" height="90"></canvas>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block dashboard_tables %}
+<div class="col-12">
+    <div class="card shadow-sm">
+        <div class="card-header fw-semibold"><i class="bi bi-tags me-2"></i>Kalorien nach Kategorie</div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Kategorie</th>
+                        <th class="text-end">Kalorien gesamt</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in category_breakdown %}
+                    <tr>
+                        <td>{{ row.label }}</td>
+                        <td class="text-end font-monospace fw-semibold">{{ row.total_calories }} kcal</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="2" class="text-center text-muted py-4">Keine Daten im gewählten Zeitraum.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ water_chart_data|json_script:"an-water-chart-data" }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+    const styles = getComputedStyle(document.documentElement);
+    const danger = styles.getPropertyValue("--bs-danger").trim() || "#dc3545";
+
+    const wd = JSON.parse(document.getElementById("an-water-chart-data").textContent);
+    new Chart(document.getElementById("analyticsWaterChart"), {
+        data: {
+            labels: wd.labels,
+            datasets: [
+                {
+                    type: "line",
+                    label: "Wasserziel (" + wd.goal + " ml)",
+                    data: wd.labels.map(() => wd.goal),
+                    borderColor: danger,
+                    borderDash: [6, 4],
+                    pointRadius: 0,
+                    order: 0
+                },
+                {
+                    type: "bar",
+                    label: "Wasser (ml)",
+                    data: wd.values,
+                    backgroundColor: "#0dcaf0bb",
+                    borderRadius: 5,
+                    order: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: { y: { beginAtZero: true, suggestedMax: wd.suggested_max } }
+        }
+    });
+})();
+</script>
+{% include "tracker/includes/weight_chart.html" with canvas_id="analyticsWeightChart" data_id="an-weight-chart-data" %}
+{% include "tracker/includes/macro_calorie_chart.html" with canvas_id="analyticsCalorieChart" data_id="an-macro-chart-data" %}
+{% endblock %}

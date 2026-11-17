@@ -1,0 +1,185 @@
+{% extends "design_studio/layouts/base.html" %}
+
+{% block title %}Profil &amp; Einstellungen - {{ design_studio_app_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1">Profil &amp; Einstellungen</h2>
+        <p class="text-muted small mb-0">Persönliche Stammdaten, Kalorienziel und Design Studio</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        {% if request.user.is_staff %}
+        <a href="{% url 'admin:index' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-shield-lock me-1"></i>Django Admin
+        </a>
+        {% endif %}
+        <a href="{% url 'tracker:logout' %}" class="btn btn-outline-danger">
+            <i class="bi bi-box-arrow-right me-1"></i>Abmelden
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card shadow-sm h-100">
+            <div class="card-header fw-semibold">
+                <i class="bi bi-person-vcard me-2"></i>Stammdaten &amp; Ziele ({{ request.user.username }})
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.first_name.id_for_label }}">{{ form.first_name.label }}</label>
+                            {{ form.first_name }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.last_name.id_for_label }}">{{ form.last_name.label }}</label>
+                            {{ form.last_name }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                            {{ form.email }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.height_cm.id_for_label }}">{{ form.height_cm.label }}</label>
+                            {{ form.height_cm }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.age.id_for_label }}">{{ form.age.label }}</label>
+                            {{ form.age }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.gender.id_for_label }}">{{ form.gender.label }}</label>
+                            {{ form.gender }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="{{ form.activity_level.id_for_label }}">{{ form.activity_level.label }}</label>
+                            {{ form.activity_level }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.start_weight_kg.id_for_label }}">{{ form.start_weight_kg.label }}</label>
+                            {{ form.start_weight_kg }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.target_weight_kg.id_for_label }}">{{ form.target_weight_kg.label }}</label>
+                            {{ form.target_weight_kg }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.daily_calorie_goal.id_for_label }}">{{ form.daily_calorie_goal.label }}</label>
+                            {{ form.daily_calorie_goal }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.daily_water_goal_ml.id_for_label }}">{{ form.daily_water_goal_ml.label }}</label>
+                            {{ form.daily_water_goal_ml }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.daily_fiber_goal_g.id_for_label }}">{{ form.daily_fiber_goal_g.label }}</label>
+                            {{ form.daily_fiber_goal_g }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.activity_kcal_low.id_for_label }}">{{ form.activity_kcal_low.label }}</label>
+                            {{ form.activity_kcal_low }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.activity_kcal_medium.id_for_label }}">{{ form.activity_kcal_medium.label }}</label>
+                            {{ form.activity_kcal_medium }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.activity_kcal_high.id_for_label }}">{{ form.activity_kcal_high.label }}</label>
+                            {{ form.activity_kcal_high }}
+                        </div>
+                    </div>
+                    <div class="mt-4 d-flex flex-wrap gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i>Stammdaten speichern
+                        </button>
+                    </div>
+                </form>
+
+                {% if recommended_tdee or recommended_water_ml %}
+                <hr class="my-4">
+                {% if recommended_tdee %}
+                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3">
+                    <div>
+                        <div class="fw-semibold">Berechneter Tagesbedarf (TDEE): <span class="font-monospace">{{ recommended_tdee }} kcal</span></div>
+                        <div class="small text-muted">Basierend auf Größe, Alter, Aktivitätslevel und {% if latest_weight %}aktuellem Gewicht ({{ latest_weight.weight_kg }} kg){% else %}Startgewicht{% endif %}.</div>
+                    </div>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="apply_tdee" value="1">
+                        <button type="submit" class="btn btn-sm btn-outline-primary text-nowrap">Als Ziel übernehmen</button>
+                    </form>
+                </div>
+                {% endif %}
+                {% if recommended_water_ml %}
+                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3">
+                    <div>
+                        <div class="fw-semibold">Berechneter Wasserbedarf (~35 ml/kg): <span class="font-monospace">{{ recommended_water_ml }} ml</span></div>
+                        <div class="small text-muted">Richtwert basierend auf deinem {% if latest_weight %}aktuellen Gewicht ({{ latest_weight.weight_kg }} kg){% else %}Startgewicht{% endif %}.</div>
+                    </div>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="apply_water_need" value="1">
+                        <button type="submit" class="btn btn-sm btn-outline-info text-nowrap">Als Wasserziel übernehmen</button>
+                    </form>
+                </div>
+                {% endif %}
+                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
+                    <div>
+                        <div class="fw-semibold">Empfohlene Ballaststoffe (14 g / 1.000 kcal): <span class="font-monospace">{{ recommended_fiber_g }} g</span></div>
+                        <div class="small text-muted">DGE-Richtwert: mindestens 30 g/Tag bzw. 14 g pro 1.000 kcal.</div>
+                    </div>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="apply_fiber_need" value="1">
+                        <button type="submit" class="btn btn-sm btn-outline-success text-nowrap">Als Ballaststoffziel übernehmen</button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card shadow-sm h-100">
+            <div class="card-header fw-semibold">
+                <i class="bi bi-palette me-2"></i>Design Studio &amp; Darstellung
+            </div>
+            <div class="card-body d-flex flex-column justify-content-between">
+                <div>
+                    <p class="text-muted small">
+                        Passe Farbpalette, Stimmung, Tag-/Nachtmodus, Karten-Oberflächen und die Menü-Anordnung individuell für dein Konto an.
+                    </p>
+                    <ul class="list-group list-group-flush mb-4">
+                        <li class="list-group-item d-flex justify-content-between px-0">
+                            <span class="text-muted">Aktuelle Stimmung</span>
+                            <span class="fw-semibold text-capitalize">{{ theme_studio.mood|default:"modern" }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between px-0">
+                            <span class="text-muted">Modus</span>
+                            <span class="fw-semibold">{% if theme_palette and theme_palette.is_dark %}Nachtmodus{% else %}Tagmodus{% endif %}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between px-0">
+                            <span class="text-muted">Menü-Layout</span>
+                            <span class="fw-semibold text-capitalize">{{ theme_studio.menu_layout|default:"navbar" }}</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'design_studio:studio' %}?next={% url 'tracker:profile' %}" class="btn btn-primary">
+                        <i class="bi bi-palette me-1"></i>Design Studio öffnen
+                    </a>
+                    <a href="{% url 'design_studio:toggle_night' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-moon-stars me-1"></i>Tag-/Nachtmodus umschalten
+                    </a>
+                    <a href="{% url 'design_studio:export' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-download me-1"></i>Theme als JSON exportieren
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

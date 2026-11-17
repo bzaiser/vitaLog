@@ -1,0 +1,135 @@
+{{ macro_chart_data|json_script:data_id }}
+<script>
+(function() {
+    const dataEl = document.getElementById("{{ data_id }}");
+    const canvas = document.getElementById("{{ canvas_id }}");
+    if (!dataEl || !canvas) return;
+
+    const d = JSON.parse(dataEl.textContent);
+    const styles = getComputedStyle(document.documentElement);
+    const bodyColor = styles.getPropertyValue("--bs-body-color").trim() || "#1e293b";
+    const dangerColor = styles.getPropertyValue("--bs-danger").trim() || "#dc3545";
+
+    const goalSeries = d.goal_series || d.labels.map(() => d.goal);
+    const hasOther = d.other_kcal.some(v => v > 0);
+
+    const datasets = [
+        {
+            type: "line",
+            label: "Tagesziel (Basis + Bewegung)",
+            data: goalSeries,
+            borderColor: dangerColor,
+            backgroundColor: dangerColor,
+            borderWidth: 2,
+            borderDash: [6, 4],
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            fill: false,
+            order: 0
+        },
+        {
+            type: "bar",
+            label: "Eiweiß",
+            data: d.protein_kcal,
+            grams: d.protein_g,
+            backgroundColor: "#0d6efd",
+            stack: "macros",
+            order: 1
+        },
+        {
+            type: "bar",
+            label: "Netto-KH",
+            data: d.carbs_kcal,
+            grams: d.carbs_g,
+            backgroundColor: "#ffc107",
+            stack: "macros",
+            order: 1
+        },
+        {
+            type: "bar",
+            label: "Ballaststoffe (in KH)",
+            data: d.fiber_kcal,
+            grams: d.fiber_g,
+            backgroundColor: "#198754",
+            stack: "macros",
+            order: 1
+        },
+        {
+            type: "bar",
+            label: "Fett",
+            data: d.fat_kcal,
+            grams: d.fat_g,
+            backgroundColor: "#fd7e14",
+            borderRadius: hasOther ? 0 : { topLeft: 4, topRight: 4 },
+            stack: "macros",
+            order: 1
+        }
+    ];
+
+    if (hasOther) {
+        datasets.push({
+            type: "bar",
+            label: "Sonstige kcal",
+            data: d.other_kcal,
+            backgroundColor: "#adb5bd",
+            borderRadius: { topLeft: 4, topRight: 4 },
+            stack: "macros",
+            order: 1
+        });
+    }
+
+    new Chart(canvas, {
+        data: { labels: d.labels, datasets: datasets },
+        options: {
+            responsive: true,
+            interaction: { mode: "index", intersect: false },
+            plugins: {
+                legend: {
+                    position: "bottom",
+                    labels: { color: bodyColor, boxWidth: 12, padding: 12 }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            const val = ctx.parsed.y || 0;
+                            if (ctx.dataset.type === "line") {
+                                return `Tagesziel: ${val} kcal`;
+                            }
+                            const idx = ctx.dataIndex;
+                            const dayTotal = (d.protein_kcal[idx] + d.carbs_kcal[idx] + d.fat_kcal[idx] + d.fiber_kcal[idx] + d.other_kcal[idx]) || 1;
+                            const pct = Math.round((val / dayTotal) * 100);
+                            const gArr = ctx.dataset.grams;
+                            if (gArr) {
+                                return `${ctx.dataset.label}: ${val} kcal (${gArr[idx]} g · ${pct}%)`;
+                            }
+                            return `${ctx.dataset.label}: ${val} kcal (${pct}%)`;
+                        },
+                        footer: function(items) {
+                            const barItems = items.filter(i => i.dataset.type !== "line");
+                            const lineItem = items.find(i => i.dataset.type === "line");
+                            const sum = barItems.reduce((acc, i) => acc + (i.parsed.y || 0), 0);
+                            const dayGoal = lineItem ? lineItem.parsed.y : d.goal;
+                            return `Gesamt: ${sum} kcal (Ziel: ${dayGoal} kcal)`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    ticks: { color: bodyColor }
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    suggestedMax: d.suggested_max,
+                    ticks: {
+                        color: bodyColor,
+                        callback: function(v) { return v + " kcal"; }
+                    }
+                }
+            }
+        }
+    });
+})();
+</script>

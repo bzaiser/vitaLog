@@ -1,0 +1,164 @@
+{% extends "design_studio/layouts/list_page.html" %}
+
+{% block title %}Mahlzeiten - {{ design_studio_app_name }}{% endblock %}
+{% block page_title %}Mahlzeiten{% endblock %}
+{% block page_subtitle %}Tägliche Mahlzeiten filtern, erfassen, bearbeiten und exportieren{% endblock %}
+
+{% block page_actions %}
+<button type="button" class="btn btn-primary" onclick="openMealCreateModal()">
+    <i class="bi bi-plus-lg me-1"></i>Neue Mahlzeit
+</button>
+<a href="{% url 'tracker:meal_templates_list' %}" class="btn btn-outline-primary">
+    <i class="bi bi-bookmark-star me-1"></i>Vorlagen
+</a>
+<a href="?date_from={{ filter_date_from }}&date_to={{ filter_date_to }}&category={{ filter_category }}&q={{ filter_q }}&export=csv" class="btn btn-outline-secondary">
+    <i class="bi bi-filetype-csv me-1"></i>CSV-Export
+</a>
+{% endblock %}
+
+{% block table_filters %}
+<div class="card-body border-bottom">
+    <form method="get" class="row g-2 align-items-end">
+        <div class="col-md-2">
+            <label class="form-label small mb-1" for="filter_date_from">Von</label>
+            <input type="date" id="filter_date_from" name="date_from" value="{{ filter_date_from }}" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small mb-1" for="filter_date_to">Bis</label>
+            <input type="date" id="filter_date_to" name="date_to" value="{{ filter_date_to }}" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small mb-1" for="filter_category">Kategorie</label>
+            <select id="filter_category" name="category" class="form-select form-select-sm">
+                <option value="">Alle Kategorien</option>
+                {% for val, label in categories %}
+                <option value="{{ val }}" {% if filter_category == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small mb-1" for="filter_q">Suche</label>
+            <input type="text" id="filter_q" name="q" value="{{ filter_q }}" placeholder="Mahlzeit oder Notiz..." class="form-control form-control-sm">
+        </div>
+        <div class="col-md-2 d-flex gap-2">
+            <button type="submit" class="btn btn-sm btn-primary flex-grow-1">Filtern</button>
+            <a href="{% url 'tracker:meals_list' %}" class="btn btn-sm btn-outline-secondary" title="Zurücksetzen">
+                <i class="bi bi-x-lg"></i>
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block table_head %}
+<tr>
+    <th>Datum</th>
+    <th>Kategorie</th>
+    <th>Mahlzeit</th>
+    <th class="text-end">Kalorien</th>
+    <th class="text-end">Eiweiß</th>
+    <th class="text-end">KH</th>
+    <th class="text-end">Fett</th>
+    <th class="text-end">Ballastst.</th>
+    <th class="text-end">Aktionen</th>
+</tr>
+{% endblock %}
+
+{% block table_body %}
+{% for meal in meals %}
+<tr>
+    <td class="text-nowrap">{{ meal.date|date:"d.m.Y" }}</td>
+    <td><span class="badge text-bg-secondary">{{ meal.get_category_display }}</span></td>
+    <td>
+        <div class="fw-semibold">{{ meal.name }}</div>
+        {% if meal.notes %}<div class="small text-muted">{{ meal.notes }}</div>{% endif %}
+    </td>
+    <td class="text-end font-monospace fw-semibold">{{ meal.calories }} kcal</td>
+    <td class="text-end font-monospace">{{ meal.protein_g }} g</td>
+    <td class="text-end font-monospace">{{ meal.carbs_g }} g</td>
+    <td class="text-end font-monospace">{{ meal.fat_g }} g</td>
+    <td class="text-end font-monospace">{{ meal.fiber_g }} g</td>
+    <td class="text-end text-nowrap">
+        <button type="button"
+                class="btn btn-sm btn-outline-primary me-1"
+                onclick="openMealEditModal(this)"
+                data-id="{{ meal.id }}"
+                data-date="{{ meal.date|date:'Y-m-d' }}"
+                data-category="{{ meal.category }}"
+                data-name="{{ meal.name }}"
+                data-calories="{{ meal.calories }}"
+                data-protein="{{ meal.protein_g }}"
+                data-carbs="{{ meal.carbs_g }}"
+                data-fat="{{ meal.fat_g }}"
+                data-fiber="{{ meal.fiber_g }}"
+                data-notes="{{ meal.notes }}">
+            <i class="bi bi-pencil"></i>
+        </button>
+        <form method="post" class="d-inline" onsubmit="return confirm('Mahlzeit wirklich löschen?');">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="entry_id" value="{{ meal.id }}">
+            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+        </form>
+    </td>
+</tr>
+{% empty %}
+<tr>
+    <td colspan="9" class="text-center text-muted py-4">Keine Mahlzeiten gefunden.</td>
+</tr>
+{% endfor %}
+{% endblock %}
+
+{% block table_foot %}
+{% if meals %}
+<tr class="table-active fw-semibold">
+    <td colspan="3">Summe (gefiltert)</td>
+    <td class="text-end font-monospace">{{ totals.total_calories|default:0 }} kcal</td>
+    <td class="text-end font-monospace">{{ totals.total_protein|default:0|floatformat:1 }} g</td>
+    <td class="text-end font-monospace">{{ totals.total_carbs|default:0|floatformat:1 }} g</td>
+    <td class="text-end font-monospace">{{ totals.total_fat|default:0|floatformat:1 }} g</td>
+    <td class="text-end font-monospace">{{ totals.total_fiber|default:0|floatformat:1 }} g</td>
+    <td></td>
+</tr>
+{% endif %}
+{% endblock %}
+
+{% block modals %}
+{% include "tracker/includes/meal_modal.html" %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openMealCreateModal() {
+    document.getElementById("mealModalAction").value = "create";
+    document.getElementById("mealModalEntryId").value = "";
+    document.querySelector("#mealModalLabel span").textContent = "Mahlzeit erfassen";
+    document.getElementById("id_name").value = "";
+    document.getElementById("id_calories").value = "";
+    document.getElementById("id_protein_g").value = "0";
+    document.getElementById("id_carbs_g").value = "0";
+    document.getElementById("id_fat_g").value = "0";
+    document.getElementById("id_fiber_g").value = "0";
+    document.getElementById("id_notes").value = "";
+    const tplSel = document.getElementById("mealTemplateSelect");
+    if (tplSel) tplSel.value = "";
+    bootstrap.Modal.getOrCreateInstance(document.getElementById("mealModal")).show();
+}
+
+function openMealEditModal(btn) {
+    document.getElementById("mealModalAction").value = "update";
+    document.getElementById("mealModalEntryId").value = btn.dataset.id;
+    document.querySelector("#mealModalLabel span").textContent = "Mahlzeit bearbeiten";
+    document.getElementById("id_date").value = btn.dataset.date;
+    document.getElementById("id_category").value = btn.dataset.category;
+    document.getElementById("id_name").value = btn.dataset.name;
+    document.getElementById("id_calories").value = btn.dataset.calories;
+    document.getElementById("id_protein_g").value = btn.dataset.protein.replace(",", ".");
+    document.getElementById("id_carbs_g").value = btn.dataset.carbs.replace(",", ".");
+    document.getElementById("id_fat_g").value = btn.dataset.fat.replace(",", ".");
+    document.getElementById("id_fiber_g").value = (btn.dataset.fiber || "0").replace(",", ".");
+    document.getElementById("id_notes").value = btn.dataset.notes;
+    bootstrap.Modal.getOrCreateInstance(document.getElementById("mealModal")).show();
+}
+</script>
+{% endblock %}

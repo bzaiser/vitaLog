@@ -1,0 +1,84 @@
+<div class="modal fade" id="weightModal" tabindex="-1" aria-labelledby="weightModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" action="{% url 'tracker:weights_list' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" id="weightModalAction" value="create">
+                <input type="hidden" name="entry_id" id="weightModalEntryId" value="">
+                {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="weightModalLabel">
+                        <i class="bi bi-activity me-2"></i><span>Gewicht erfassen</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info py-2 px-3 mb-3 small d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <i class="bi bi-fire me-1"></i>
+                            Kalorien am Tag: <strong id="weightModalDayCal" class="font-monospace">{{ weight_modal_today_calories|default:0 }}</strong> kcal
+                            <span class="text-muted">(Ziel: <span id="weightModalGoal" class="font-monospace">{{ weight_modal_goal|default:2000 }}</span> kcal)</span>
+                        </div>
+                        <div>
+                            Übrig: <strong id="weightModalRemaining" class="font-monospace">{{ weight_modal_remaining|default:0 }}</strong> kcal
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ weight_form.date.id_for_label }}">{{ weight_form.date.label }}</label>
+                            {{ weight_form.date }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ weight_form.weight_kg.id_for_label }}">{{ weight_form.weight_kg.label }}</label>
+                            {{ weight_form.weight_kg }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="{{ weight_form.body_fat_pct.id_for_label }}">{{ weight_form.body_fat_pct.label }}</label>
+                            {{ weight_form.body_fat_pct }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="{{ weight_form.notes.id_for_label }}">{{ weight_form.notes.label }}</label>
+                            {{ weight_form.notes }}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-1"></i>Speichern
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{{ weight_modal_daily_map|json_script:"ds-weight-daily-cal-map" }}
+{{ weight_modal_activity_map|json_script:"ds-weight-daily-act-map" }}
+<script>
+(function() {
+    const mapEl = document.getElementById("ds-weight-daily-cal-map");
+    if (!mapEl) return;
+    const dailyMap = JSON.parse(mapEl.textContent || "{}");
+    const actEl = document.getElementById("ds-weight-daily-act-map");
+    const actMap = actEl ? JSON.parse(actEl.textContent || "{}") : {};
+    const baseGoal = parseInt("{{ weight_modal_base_goal|default:2000 }}", 10);
+    const modal = document.getElementById("weightModal");
+    const dateInput = modal ? modal.querySelector("input[name='date']") : null;
+
+    function updateCalorieInfo() {
+        if (!dateInput) return;
+        const val = dateInput.value;
+        const used = dailyMap[val] || 0;
+        const dayGoal = baseGoal + (actMap[val] || 0);
+        const rem = dayGoal - used;
+        document.getElementById("weightModalDayCal").textContent = used;
+        document.getElementById("weightModalGoal").textContent = dayGoal;
+        document.getElementById("weightModalRemaining").textContent = rem;
+    }
+
+    if (dateInput) {
+        dateInput.addEventListener("change", updateCalorieInfo);
+        modal.addEventListener("shown.bs.modal", updateCalorieInfo);
+    }
+})();
+</script>

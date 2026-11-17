@@ -1,0 +1,128 @@
+{% extends "design_studio/layouts/list_page.html" %}
+
+{% block title %}Gewicht - {{ design_studio_app_name }}{% endblock %}
+{% block page_title %}Gewichtshistorie{% endblock %}
+{% block page_subtitle %}Gewichtsmessungen verwalten, filtern und exportieren{% endblock %}
+
+{% block page_actions %}
+<button type="button" class="btn btn-primary" onclick="openWeightCreateModal()">
+    <i class="bi bi-plus-lg me-1"></i>Neuer Eintrag
+</button>
+<a href="?date_from={{ filter_date_from }}&date_to={{ filter_date_to }}&q={{ filter_q }}&export=csv" class="btn btn-outline-secondary">
+    <i class="bi bi-filetype-csv me-1"></i>CSV-Export
+</a>
+{% endblock %}
+
+{% block table_filters %}
+<div class="card-body border-bottom">
+    <form method="get" class="row g-2 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label small mb-1" for="w_date_from">Von</label>
+            <input type="date" id="w_date_from" name="date_from" value="{{ filter_date_from }}" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small mb-1" for="w_date_to">Bis</label>
+            <input type="date" id="w_date_to" name="date_to" value="{{ filter_date_to }}" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label small mb-1" for="w_q">Suche in Notizen</label>
+            <input type="text" id="w_q" name="q" value="{{ filter_q }}" placeholder="Notiz suchen..." class="form-control form-control-sm">
+        </div>
+        <div class="col-md-2 d-flex gap-2">
+            <button type="submit" class="btn btn-sm btn-primary flex-grow-1">Filtern</button>
+            <a href="{% url 'tracker:weights_list' %}" class="btn btn-sm btn-outline-secondary" title="Zurücksetzen">
+                <i class="bi bi-x-lg"></i>
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block table_head %}
+<tr>
+    <th>Datum</th>
+    <th class="text-end">Gewicht</th>
+    <th class="text-end">Körperfett</th>
+    <th class="text-end">Kalorien (Tag)</th>
+    <th class="text-end">Übrig (Tag)</th>
+    <th>Notizen</th>
+    <th class="text-end">Aktionen</th>
+</tr>
+{% endblock %}
+
+{% block table_body %}
+{% for w in weights %}
+<tr>
+    <td class="text-nowrap">{{ w.date|date:"d.m.Y" }}</td>
+    <td class="text-end font-monospace fw-semibold">{{ w.weight_kg }} kg</td>
+    <td class="text-end font-monospace">{% if w.body_fat_pct %}{{ w.body_fat_pct }} %{% else %}–{% endif %}</td>
+    <td class="text-end font-monospace">{{ w.day_calories }} kcal</td>
+    <td class="text-end font-monospace {% if w.day_remaining < 0 %}text-danger{% else %}text-success{% endif %}">{{ w.day_remaining }} kcal</td>
+    <td class="text-muted">{{ w.notes|default:"–" }}</td>
+    <td class="text-end text-nowrap">
+        <button type="button"
+                class="btn btn-sm btn-outline-primary me-1"
+                onclick="openWeightEditModal(this)"
+                data-id="{{ w.id }}"
+                data-date="{{ w.date|date:'Y-m-d' }}"
+                data-weight="{{ w.weight_kg }}"
+                data-fat="{{ w.body_fat_pct|default:'' }}"
+                data-notes="{{ w.notes }}">
+            <i class="bi bi-pencil"></i>
+        </button>
+        <form method="post" class="d-inline" onsubmit="return confirm('Gewichtseintrag wirklich löschen?');">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="entry_id" value="{{ w.id }}">
+            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+        </form>
+    </td>
+</tr>
+{% empty %}
+<tr>
+    <td colspan="7" class="text-center text-muted py-4">Keine Gewichtseinträge gefunden.</td>
+</tr>
+{% endfor %}
+{% endblock %}
+
+{% block table_foot %}
+{% if weights %}
+<tr class="table-active small fw-semibold">
+    <td>Statistik (gefiltert)</td>
+    <td class="text-end font-monospace">
+        &Oslash; {{ stats.avg_weight|floatformat:1 }} kg
+        (Min {{ stats.min_weight|floatformat:1 }} / Max {{ stats.max_weight|floatformat:1 }})
+    </td>
+    <td colspan="5"></td>
+</tr>
+{% endif %}
+{% endblock %}
+
+{% block modals %}
+{% include "tracker/includes/weight_modal.html" %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openWeightCreateModal() {
+    document.getElementById("weightModalAction").value = "create";
+    document.getElementById("weightModalEntryId").value = "";
+    document.querySelector("#weightModalLabel span").textContent = "Gewicht erfassen";
+    document.getElementById("id_weight_kg").value = "";
+    document.getElementById("id_body_fat_pct").value = "";
+    document.getElementById("id_notes").value = "";
+    bootstrap.Modal.getOrCreateInstance(document.getElementById("weightModal")).show();
+}
+
+function openWeightEditModal(btn) {
+    document.getElementById("weightModalAction").value = "update";
+    document.getElementById("weightModalEntryId").value = btn.dataset.id;
+    document.querySelector("#weightModalLabel span").textContent = "Gewicht bearbeiten";
+    document.getElementById("id_date").value = btn.dataset.date;
+    document.getElementById("id_weight_kg").value = btn.dataset.weight.replace(",", ".");
+    document.getElementById("id_body_fat_pct").value = btn.dataset.fat.replace(",", ".");
+    document.getElementById("id_notes").value = btn.dataset.notes;
+    bootstrap.Modal.getOrCreateInstance(document.getElementById("weightModal")).show();
+}
+</script>
+{% endblock %}

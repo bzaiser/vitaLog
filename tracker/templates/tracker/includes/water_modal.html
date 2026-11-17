@@ -1,0 +1,56 @@
+<div class="modal fade" id="waterModal" tabindex="-1" aria-labelledby="waterModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" action="{% url 'tracker:water_list' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" id="waterModalAction" value="create">
+                <input type="hidden" name="entry_id" id="waterModalEntryId" value="">
+                {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="waterModalLabel">
+                        <i class="bi bi-droplet me-2"></i><span>Wasser erfassen</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ water_form.date.id_for_label }}">{{ water_form.date.label }}</label>
+                            {{ water_form.date }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ water_form.drink_type.id_for_label }}">{{ water_form.drink_type.label }}</label>
+                            {{ water_form.drink_type }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="{{ water_form.amount_ml.id_for_label }}">{{ water_form.amount_ml.label }}</label>
+                            {{ water_form.amount_ml }}
+                            <div class="d-flex gap-2 mt-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setWaterAmount(250)">250 ml</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setWaterAmount(500)">500 ml</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setWaterAmount(750)">750 ml</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setWaterAmount(1000)">1000 ml</button>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="{{ water_form.notes.id_for_label }}">{{ water_form.notes.label }}</label>
+                            {{ water_form.notes }}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-1"></i>Speichern
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+function setWaterAmount(ml) {
+    const input = document.querySelector("#waterModal input[name='amount_ml']");
+    if (input) input.value = ml;
+}
+</script>

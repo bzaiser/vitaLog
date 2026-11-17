@@ -1,0 +1,209 @@
+{% extends "design_studio/layouts/list_page.html" %}
+
+{% block title %}Mahlzeitenvorlagen - {{ design_studio_app_name }}{% endblock %}
+{% block page_title %}Mahlzeitenvorlagen{% endblock %}
+{% block page_subtitle %}Wiederkehrende Mahlzeiten für Frühstück, Mittagessen, Abendessen &amp; Snack verwalten{% endblock %}
+
+{% block page_actions %}
+<button type="button" class="btn btn-primary" onclick="openTemplateCreateModal()">
+    <i class="bi bi-plus-lg me-1"></i>Neue Vorlage
+</button>
+<a href="{% url 'tracker:meals_list' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-egg-fried me-1"></i>Zu den Mahlzeiten
+</a>
+{% endblock %}
+
+{% block table_filters %}
+<div class="card-body border-bottom">
+    <form method="get" class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label small mb-1" for="tpl_category">Kategorie</label>
+            <select id="tpl_category" name="category" class="form-select form-select-sm">
+                <option value="">Alle Kategorien</option>
+                {% for val, label in categories %}
+                <option value="{{ val }}" {% if filter_category == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-5">
+            <label class="form-label small mb-1" for="tpl_q">Suche</label>
+            <input type="text" id="tpl_q" name="q" value="{{ filter_q }}" placeholder="Vorlage suchen..." class="form-control form-control-sm">
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+            <button type="submit" class="btn btn-sm btn-primary flex-grow-1">Filtern</button>
+            <a href="{% url 'tracker:meal_templates_list' %}" class="btn btn-sm btn-outline-secondary" title="Zurücksetzen">
+                <i class="bi bi-x-lg"></i>
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block table_head %}
+<tr>
+    <th>Kategorie</th>
+    <th>Vorlage</th>
+    <th class="text-end">Kalorien</th>
+    <th class="text-end">Eiweiß</th>
+    <th class="text-end">KH</th>
+    <th class="text-end">Fett</th>
+    <th class="text-end">Ballastst.</th>
+    <th class="text-end">Aktionen</th>
+</tr>
+{% endblock %}
+
+{% block table_body %}
+{% for tpl in templates %}
+<tr>
+    <td><span class="badge text-bg-secondary">{{ tpl.get_category_display }}</span></td>
+    <td>
+        <div class="fw-semibold">{{ tpl.name }}</div>
+        {% if tpl.notes %}<div class="small text-muted">{{ tpl.notes }}</div>{% endif %}
+    </td>
+    <td class="text-end font-monospace fw-semibold">{{ tpl.calories }} kcal</td>
+    <td class="text-end font-monospace">{{ tpl.protein_g }} g</td>
+    <td class="text-end font-monospace">{{ tpl.carbs_g }} g</td>
+    <td class="text-end font-monospace">{{ tpl.fat_g }} g</td>
+    <td class="text-end font-monospace">{{ tpl.fiber_g }} g</td>
+    <td class="text-end text-nowrap">
+        <button type="button"
+                class="btn btn-sm btn-outline-primary me-1"
+                onclick="openTemplateEditModal(this)"
+                data-id="{{ tpl.id }}"
+                data-category="{{ tpl.category }}"
+                data-name="{{ tpl.name }}"
+                data-calories="{{ tpl.calories }}"
+                data-protein="{{ tpl.protein_g }}"
+                data-carbs="{{ tpl.carbs_g }}"
+                data-fat="{{ tpl.fat_g }}"
+                data-fiber="{{ tpl.fiber_g }}"
+                data-notes="{{ tpl.notes }}">
+            <i class="bi bi-pencil"></i>
+        </button>
+        <form method="post" class="d-inline" onsubmit="return confirm('Vorlage wirklich löschen?');">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="entry_id" value="{{ tpl.id }}">
+            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+        </form>
+    </td>
+</tr>
+{% empty %}
+<tr>
+    <td colspan="8" class="text-center text-muted py-4">Noch keine Vorlagen gespeichert.</td>
+</tr>
+{% endfor %}
+{% endblock %}
+
+{% block modals %}
+<div class="modal fade" id="templateModal" tabindex="-1" aria-labelledby="templateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" action="{% url 'tracker:meal_templates_list' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" id="tplModalAction" value="create">
+                <input type="hidden" name="entry_id" id="tplModalEntryId" value="">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="templateModalLabel">
+                        <i class="bi bi-bookmark-star me-2"></i><span>Vorlage erfassen</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-5">
+                            <label class="form-label" for="{{ template_form.category.id_for_label }}">{{ template_form.category.label }}</label>
+                            {{ template_form.category }}
+                        </div>
+                        <div class="col-md-7">
+                            <label class="form-label" for="{{ template_form.name.id_for_label }}">{{ template_form.name.label }}</label>
+                            {{ template_form.name }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ template_form.protein_g.id_for_label }}">{{ template_form.protein_g.label }}</label>
+                            {{ template_form.protein_g }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ template_form.fat_g.id_for_label }}">{{ template_form.fat_g.label }}</label>
+                            {{ template_form.fat_g }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ template_form.carbs_g.id_for_label }}">{{ template_form.carbs_g.label }}</label>
+                            {{ template_form.carbs_g }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ template_form.fiber_g.id_for_label }}">{{ template_form.fiber_g.label }}</label>
+                            {{ template_form.fiber_g }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="{{ template_form.calories.id_for_label }}">{{ template_form.calories.label }} <span class="text-muted small">(automatisch berechnet)</span></label>
+                            {{ template_form.calories }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="{{ template_form.notes.id_for_label }}">{{ template_form.notes.label }}</label>
+                            {{ template_form.notes }}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-1"></i>Speichern
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function recalculateTemplateCalories() {
+    const modal = document.getElementById("templateModal");
+    if (!modal) return;
+    const num = (sel) => parseFloat((modal.querySelector(sel)?.value || "0").replace(",", ".")) || 0;
+    modal.querySelector("#id_calories").value = Math.round(
+        num("#id_protein_g") * 4 + num("#id_carbs_g") * 4 + num("#id_fat_g") * 9
+    );
+}
+
+(function() {
+    const modal = document.getElementById("templateModal");
+    if (!modal) return;
+    ["#id_protein_g", "#id_carbs_g", "#id_fat_g", "#id_fiber_g"].forEach((sel) => {
+        const el = modal.querySelector(sel);
+        if (el) el.addEventListener("input", recalculateTemplateCalories);
+    });
+})();
+
+function openTemplateCreateModal() {
+    document.getElementById("tplModalAction").value = "create";
+    document.getElementById("tplModalEntryId").value = "";
+    document.querySelector("#templateModalLabel span").textContent = "Vorlage erfassen";
+    document.getElementById("id_name").value = "";
+    document.getElementById("id_protein_g").value = "0";
+    document.getElementById("id_carbs_g").value = "0";
+    document.getElementById("id_fat_g").value = "0";
+    document.getElementById("id_fiber_g").value = "0";
+    document.getElementById("id_calories").value = "0";
+    document.getElementById("id_notes").value = "";
+    bootstrap.Modal.getOrCreateInstance(document.getElementById("templateModal")).show();
+}
+
+function openTemplateEditModal(btn) {
+    document.getElementById("tplModalAction").value = "update";
+    document.getElementById("tplModalEntryId").value = btn.dataset.id;
+    document.querySelector("#templateModalLabel span").textContent = "Vorlage bearbeiten";
+    document.getElementById("id_category").value = btn.dataset.category;
+    document.getElementById("id_name").value = btn.dataset.name;
+    document.getElementById("id_protein_g").value = btn.dataset.protein.replace(",", ".");
+    document.getElementById("id_carbs_g").value = btn.dataset.carbs.replace(",", ".");
+    document.getElementById("id_fat_g").value = btn.dataset.fat.replace(",", ".");
+    document.getElementById("id_fiber_g").value = (btn.dataset.fiber || "0").replace(",", ".");
+    document.getElementById("id_notes").value = btn.dataset.notes;
+    recalculateTemplateCalories();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById("templateModal")).show();
+}
+</script>
+{% endblock %}

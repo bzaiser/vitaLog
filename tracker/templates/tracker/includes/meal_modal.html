@@ -1,0 +1,128 @@
+<div class="modal fade" id="mealModal" tabindex="-1" aria-labelledby="mealModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" action="{% url 'tracker:meals_list' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" id="mealModalAction" value="create">
+                <input type="hidden" name="entry_id" id="mealModalEntryId" value="">
+                {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="mealModalLabel">
+                        <i class="bi bi-egg-fried me-2"></i><span>Mahlzeit erfassen</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+                </div>
+                <div class="modal-body">
+                    {% if meal_templates %}
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold" for="mealTemplateSelect">
+                            <i class="bi bi-bookmark-star me-1"></i>Vorlage auswählen (Werte danach anpassbar)
+                        </label>
+                        <select id="mealTemplateSelect" class="form-select form-select-sm" onchange="applyMealTemplate(this)">
+                            <option value="">-- Keine Vorlage / Neu eingeben --</option>
+                            {% for tpl in meal_templates %}
+                            <option value="{{ tpl.id }}"
+                                    data-category="{{ tpl.category }}"
+                                    data-name="{{ tpl.name }}"
+                                    data-calories="{{ tpl.calories }}"
+                                    data-protein="{{ tpl.protein_g }}"
+                                    data-carbs="{{ tpl.carbs_g }}"
+                                    data-fat="{{ tpl.fat_g }}"
+                                    data-fiber="{{ tpl.fiber_g }}"
+                                    data-notes="{{ tpl.notes }}">
+                                [{{ tpl.get_category_display }}] {{ tpl.name }} ({{ tpl.calories }} kcal)
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ meal_form.date.id_for_label }}">{{ meal_form.date.label }}</label>
+                            {{ meal_form.date }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ meal_form.category.id_for_label }}">{{ meal_form.category.label }}</label>
+                            {{ meal_form.category }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="{{ meal_form.name.id_for_label }}">{{ meal_form.name.label }}</label>
+                            {{ meal_form.name }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ meal_form.protein_g.id_for_label }}">{{ meal_form.protein_g.label }}</label>
+                            {{ meal_form.protein_g }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ meal_form.fat_g.id_for_label }}">{{ meal_form.fat_g.label }}</label>
+                            {{ meal_form.fat_g }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ meal_form.carbs_g.id_for_label }}">{{ meal_form.carbs_g.label }}</label>
+                            {{ meal_form.carbs_g }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ meal_form.fiber_g.id_for_label }}">{{ meal_form.fiber_g.label }}</label>
+                            {{ meal_form.fiber_g }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="{{ meal_form.calories.id_for_label }}">{{ meal_form.calories.label }} <span class="text-muted small">(automatisch aus Makros berechnet)</span></label>
+                            {{ meal_form.calories }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="{{ meal_form.notes.id_for_label }}">{{ meal_form.notes.label }}</label>
+                            {{ meal_form.notes }}
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="save_as_template" id="saveAsTemplateCheck">
+                                <label class="form-check-label small" for="saveAsTemplateCheck">
+                                    Auch als wiederkehrende Vorlage speichern
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-1"></i>Speichern
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+function recalculateModalCalories(container) {
+    if (!container) return;
+    const num = (sel) => parseFloat((container.querySelector(sel)?.value || "0").replace(",", ".")) || 0;
+    const kcal = Math.round(num("#id_protein_g") * 4 + num("#id_carbs_g") * 4 + num("#id_fat_g") * 9);
+    const calInput = container.querySelector("#id_calories");
+    if (calInput) calInput.value = kcal;
+}
+
+(function() {
+    const modal = document.getElementById("mealModal");
+    if (!modal) return;
+    ["#id_protein_g", "#id_carbs_g", "#id_fat_g", "#id_fiber_g"].forEach((sel) => {
+        const el = modal.querySelector(sel);
+        if (el) el.addEventListener("input", () => recalculateModalCalories(modal));
+    });
+    modal.addEventListener("shown.bs.modal", () => recalculateModalCalories(modal));
+})();
+
+function applyMealTemplate(selectEl) {
+    const opt = selectEl.options[selectEl.selectedIndex];
+    if (!opt || !opt.value) return;
+    const modal = document.getElementById("mealModal");
+    modal.querySelector("#id_category").value = opt.dataset.category || "lunch";
+    modal.querySelector("#id_name").value = opt.dataset.name || "";
+    modal.querySelector("#id_protein_g").value = (opt.dataset.protein || "0").replace(",", ".");
+    modal.querySelector("#id_carbs_g").value = (opt.dataset.carbs || "0").replace(",", ".");
+    modal.querySelector("#id_fat_g").value = (opt.dataset.fat || "0").replace(",", ".");
+    modal.querySelector("#id_fiber_g").value = (opt.dataset.fiber || "0").replace(",", ".");
+    modal.querySelector("#id_notes").value = opt.dataset.notes || "";
+    recalculateModalCalories(modal);
+}
+</script>
