@@ -31,6 +31,16 @@ chmod -R 777 "$ROOT_DIR/data"
 echo "Syncing requirements..."
 docker compose $ENV_ARG exec -u root web pip install -q --no-cache-dir --root-user-action=ignore -r requirements.txt
 
+DS_REPO="https://github.com/bzaiser/django-design-studio.git"
+DS_COMMIT_FILE="$ROOT_DIR/data/.ds_commit"
+DS_REMOTE=$(git ls-remote "$DS_REPO" refs/heads/main 2>/dev/null | awk '{print $1}')
+DS_LOCAL=$(cat "$DS_COMMIT_FILE" 2>/dev/null || true)
+if [ -n "$DS_REMOTE" ] && [ "$DS_REMOTE" != "$DS_LOCAL" ]; then
+    echo "Updating django-design-studio ($DS_REMOTE)..."
+    docker compose $ENV_ARG exec -u root web pip install -q --no-cache-dir --force-reinstall --no-deps --root-user-action=ignore "git+${DS_REPO}@${DS_REMOTE}"
+    echo "$DS_REMOTE" > "$DS_COMMIT_FILE"
+fi
+
 echo "Running database migrations..."
 docker compose $ENV_ARG exec web python3 manage.py migrate --noinput
 
