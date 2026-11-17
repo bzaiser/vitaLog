@@ -87,6 +87,9 @@
                     <button type="submit" class="btn {% if today_activity_level == 'custom' %}btn-primary{% else %}btn-outline-primary{% endif %}">OK</button>
                 </div>
             </form>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="openActivityModal('{{ today|date:'Y-m-d' }}', '{{ today_activity_level }}', {{ today_activity_kcal }})">
+                <i class="bi bi-calendar-event me-1"></i>Tag wählen
+            </button>
         </div>
     </div>
 </div>
@@ -109,6 +112,19 @@
         </div>
         <div class="card-body">
             <canvas id="calorieChart" height="170"></canvas>
+        </div>
+    </div>
+</div>
+<div class="col-12">
+    <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span class="fw-semibold"><i class="bi bi-smartwatch me-2"></i>Bewegung über die Zeit (14 Tage) <span class="text-muted small fw-normal">(Balken anklicken zum Ändern)</span></span>
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="openActivityModal('{{ today|date:'Y-m-d' }}', '{{ today_activity_level }}', {{ today_activity_kcal }})">
+                <i class="bi bi-pencil me-1"></i>Ändern
+            </button>
+        </div>
+        <div class="card-body">
+            <canvas id="dashboardActivityChart" height="90"></canvas>
         </div>
     </div>
 </div>
@@ -188,10 +204,12 @@
 {% include "tracker/includes/meal_modal.html" with next_url=dash_next %}
 {% include "tracker/includes/weight_modal.html" with next_url=dash_next %}
 {% include "tracker/includes/water_modal.html" with next_url=dash_next %}
+{% include "tracker/includes/activity_modal.html" with next_url=dash_next %}
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 {% include "tracker/includes/weight_chart.html" with canvas_id="weightChart" data_id="ds-weight-chart-data" %}
 {% include "tracker/includes/macro_calorie_chart.html" with canvas_id="calorieChart" data_id="ds-macro-chart-data" %}
+{% include "tracker/includes/activity_chart.html" with canvas_id="dashboardActivityChart" data_id="ds-activity-chart-data" %}
 {% endblock %}

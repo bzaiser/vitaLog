@@ -107,12 +107,14 @@ def build_macro_calorie_chart_series(user, start_date, end_date, calorie_goal: i
     activity_map = get_daily_activity_map(user)
 
     labels, p_kcal, c_kcal, f_kcal, fib_kcal, o_kcal = [], [], [], [], [], []
-    p_g, c_g, f_g, fib_g, goal_series = [], [], [], [], []
+    p_g, c_g, f_g, fib_g, goal_series, act_kcal = [], [], [], [], [], []
     max_day_cal = 0
 
     for d in days:
         labels.append(d.strftime("%d.%m."))
-        day_goal = calorie_goal + activity_map.get(d.isoformat(), 0)
+        day_act = activity_map.get(d.isoformat(), 0)
+        act_kcal.append(day_act)
+        day_goal = calorie_goal + day_act
         goal_series.append(day_goal)
         r = by_day.get(d)
         if not r:
@@ -170,6 +172,7 @@ def build_macro_calorie_chart_series(user, start_date, end_date, calorie_goal: i
         "fiber_g": fib_g,
         "goal": calorie_goal,
         "goal_series": goal_series,
+        "activity_kcal": act_kcal,
         "suggested_max": suggested_max,
     }
 
@@ -208,6 +211,27 @@ def build_weight_chart_series(user, start_date, end_date, target_weight_kg: Deci
         "values": values,
         "target": target_val,
         "suggested_min": suggested_min,
+        "suggested_max": suggested_max,
+    }
+
+
+def build_activity_chart_series(user, start_date, end_date) -> dict:
+    """Erzeugt tägliche Bewegungskalorien-Serie (kcal) inkl. Datum & Level für Charts."""
+    num_days = (end_date - start_date).days + 1
+    days = [start_date + timedelta(days=i) for i in range(num_days)]
+    rows = DailyActivity.objects.filter(user=user, date__gte=start_date, date__lte=end_date).values(
+        "date", "level", "calories_burned"
+    )
+    by_day = {r["date"]: r for r in rows}
+    values = [int(by_day[d]["calories_burned"]) if d in by_day else 0 for d in days]
+    levels = [by_day[d]["level"] if d in by_day else "none" for d in days]
+    max_val = max([500] + values)
+    suggested_max = max(500, ((int(max_val * 1.15) + 99) // 100) * 100)
+    return {
+        "labels": [d.strftime("%d.%m.") for d in days],
+        "dates": [d.isoformat() for d in days],
+        "values": values,
+        "levels": levels,
         "suggested_max": suggested_max,
     }
 
@@ -322,6 +346,7 @@ def get_dashboard_context(user) -> dict:
     )
 
     macro_chart = build_macro_calorie_chart_series(user, start_date, today, base_calorie_goal)
+    activity_chart = build_activity_chart_series(user, start_date, today)
     fiber_spark_line, fiber_spark_area = build_sparkline_paths([float(v) for v in macro_chart["fiber_g"]])
 
     water_goal_ml = profile.daily_water_goal_ml or 2500
@@ -376,6 +401,7 @@ def get_dashboard_context(user) -> dict:
         "chart_calories": calorie_series,
         "weight_chart_data": weight_chart,
         "macro_chart_data": macro_chart,
+        "activity_chart_data": activity_chart,
         "today_water_ml": today_water_ml,
         "water_goal_ml": water_goal_ml,
         "recommended_water_ml": recommended_water_ml,

@@ -386,6 +386,20 @@ class TrackerViewsTest(TestCase):
         self.assertEqual(act.calories_burned, 745)
         dash2 = self.client.get(reverse("tracker:dashboard"))
         self.assertContains(dash2, "1745")
+        self.assertContains(dash2, "ds-activity-chart-data")
+
+        # Vergangenes Datum ändern (z. B. vor 3 Tagen)
+        past_date = (today - timedelta(days=3)).isoformat()
+        self.client.post(
+            reverse("tracker:set_daily_activity"),
+            {"date": past_date, "level": "custom", "custom_kcal": 620},
+        )
+        past_act = DailyActivity.objects.get(user=self.user, date=today - timedelta(days=3))
+        self.assertEqual(past_act.calories_burned, 620)
+
+        an_resp = self.client.get(reverse("tracker:analytics"), {"days": 7})
+        self.assertContains(an_resp, "an-activity-chart-data")
+        self.assertContains(an_resp, "745")
 
     def test_analytics_and_profile_views(self):
         today = timezone.localdate()

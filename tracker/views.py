@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date as date_cls, timedelta
 from decimal import Decimal
 
 from django.contrib import messages
@@ -21,6 +21,7 @@ from .forms import (
 )
 from .models import DailyActivity, MealEntry, MealTemplate, WaterEntry, WeightEntry
 from .services import (
+    build_activity_chart_series,
     build_macro_calorie_chart_series,
     build_progress_segments,
     build_sparkline_paths,
@@ -72,9 +73,17 @@ def dashboard_view(request):
 @login_required
 @require_POST
 def set_daily_activity_view(request):
-    """Setzt die heutigen Bewegungskalorien (Preset oder Apple Watch / Manuell)."""
+    """Setzt die Bewegungskalorien für ein Datum (Preset oder Apple Watch / Manuell)."""
     profile = get_or_create_profile(request.user)
-    today = timezone.localdate()
+    raw_date = request.POST.get("date", "").strip()
+    target_date = timezone.localdate()
+    if raw_date:
+        try:
+            target_date = date_cls.fromisoformat(raw_date)
+        except ValueError:
+            messages.error(request, "Ungültiges Datum.")
+            return redirect(request.POST.get("next") or "tracker:dashboard")
+
     level = request.POST.get("level", "none").strip()
 
     preset_map = {
@@ -100,10 +109,10 @@ def set_daily_activity_view(request):
 
     DailyActivity.objects.update_or_create(
         user=request.user,
-        date=today,
+        date=target_date,
         defaults={"level": level, "calories_burned": burned},
     )
-    messages.success(request, f"Bewegung heute gespeichert (+{burned} kcal).")
+    messages.success(request, f"Bewegung für {target_date.strftime('%d.%m.%Y')} gespeichert (+{burned} kcal).")
     return redirect(request.POST.get("next") or "tracker:dashboard")
 
 
@@ -482,6 +491,12 @@ def analytics_view(request):
         else 0
     )
     water_chart = build_water_chart_series(request.user, start_date, today, water_goal_ml)
+    activity_qs = DailyActivity.objects.filter(user=request.user, date__gte=start_date, date__lte=today)
+    total_activity_kcal = int(activity_qs.aggregate(total=Sum("calories_burned"))["total"] or 0)
+    active_days_count = activity_qs.filter(calories_burned__gt=0).count()
+    avg_activity_kcal = round(total_activity_kcal / days_count) if days_count > 0 else 0
+    activity_chart = build_activity_chart_series(request.user, start_date, today)
+    activity_spark_line, activity_spark_area = build_sparkline_paths([float(v) for v in activity_chart["values"]])
 
     cal_goal = profile.daily_calorie_goal or 2000
     daily_cal_totals = [
@@ -549,6 +564,12 @@ def analytics_view(request):
             "weight_spark_area": weight_spark_area,
             "water_spark_line": water_spark_line,
             "water_spark_area": water_spark_area,
+            "total_activity_kcal": total_activity_kcal,
+            "active_days_count": active_days_count,
+            "avg_activity_kcal": avg_activity_kcal,
+            "activity_chart_data": activity_chart,
+            "activity_spark_line": activity_spark_line,
+            "activity_spark_area": activity_spark_area,
         },
     )
 

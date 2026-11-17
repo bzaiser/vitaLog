@@ -5,3 +5,6 @@ __pycache__/
 .env
 staticfiles/
 .DS_Store
+data/
+VERSION
+VERSION_DATE

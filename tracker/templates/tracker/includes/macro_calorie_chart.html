@@ -109,6 +109,11 @@
                             const lineItem = items.find(i => i.dataset.type === "line");
                             const sum = barItems.reduce((acc, i) => acc + (i.parsed.y || 0), 0);
                             const dayGoal = lineItem ? lineItem.parsed.y : d.goal;
+                            const idx = items.length ? items[0].dataIndex : 0;
+                            const act = (d.activity_kcal && d.activity_kcal[idx]) ? d.activity_kcal[idx] : 0;
+                            if (act > 0) {
+                                return `Gesamt: ${sum} kcal (Ziel: ${dayGoal} = ${d.goal} + ${act} Beweg.)`;
+                            }
                             return `Gesamt: ${sum} kcal (Ziel: ${dayGoal} kcal)`;
                         }
                     }
