@@ -4,6 +4,7 @@ from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.contrib.auth.views import LoginView
 from django.db.models import Avg, Max, Min, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
@@ -46,7 +47,12 @@ def register_view(request):
     if request.method == "POST":
         form = RegistrationForm(request.POST)
         if form.is_valid():
-            user = form.save()
+            has_admin = User.objects.filter(is_superuser=True).exists()
+            user = form.save(commit=False)
+            if not has_admin:
+                user.is_staff = True
+                user.is_superuser = True
+            user.save()
             login(request, user)
             messages.success(request, "Willkommen! Dein Konto wurde erstellt.")
             return redirect("tracker:dashboard")
@@ -500,13 +506,12 @@ def analytics_view(request):
 
     cal_goal = profile.daily_calorie_goal or 2000
     daily_cal_totals = [
-        p + c + f + fib + o
-        for p, c, f, fib, o in zip(
+        p + c + f + fib
+        for p, c, f, fib in zip(
             macro_chart["protein_kcal"],
             macro_chart["carbs_kcal"],
             macro_chart["fat_kcal"],
             macro_chart["fiber_kcal"],
-            macro_chart["other_kcal"],
         )
     ]
     cal_spark_line, cal_spark_area = build_sparkline_paths([float(v) for v in daily_cal_totals])

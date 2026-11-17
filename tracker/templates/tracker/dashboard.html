@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block title %}Dashboard - {{ design_studio_app_name }}{% endblock %}
+{% block head_extra %}{% include "tracker/includes/theme_overrides.html" %}{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
 {% block page_subtitle %}Überblick für {{ today|date:"d.m.Y" }} &middot; {{ request.user.username }}{% endblock %}
 

@@ -106,7 +106,7 @@ def build_macro_calorie_chart_series(user, start_date, end_date, calorie_goal: i
     by_day = {r["date"]: r for r in rows}
     activity_map = get_daily_activity_map(user)
 
-    labels, p_kcal, c_kcal, f_kcal, fib_kcal, o_kcal = [], [], [], [], [], []
+    labels, p_kcal, c_kcal, f_kcal, fib_kcal = [], [], [], [], []
     p_g, c_g, f_g, fib_g, goal_series, act_kcal = [], [], [], [], [], []
     max_day_cal = 0
 
@@ -122,7 +122,6 @@ def build_macro_calorie_chart_series(user, start_date, end_date, calorie_goal: i
             c_kcal.append(0)
             f_kcal.append(0)
             fib_kcal.append(0)
-            o_kcal.append(0)
             p_g.append(0.0)
             c_g.append(0.0)
             f_g.append(0.0)
@@ -133,7 +132,6 @@ def build_macro_calorie_chart_series(user, start_date, end_date, calorie_goal: i
         cg = float(r["total_carbs"] or 0)
         fg = float(r["total_fat"] or 0)
         fibg = float(r["total_fiber"] or 0)
-        tot = int(r["total_cal"] or 0)
 
         pk = round(pg * 4)
         fib_in_carbs = min(cg, fibg)
@@ -141,8 +139,7 @@ def build_macro_calorie_chart_series(user, start_date, end_date, calorie_goal: i
         ck = round(net_cg * 4)
         fibk = round(fib_in_carbs * 4)
         fk = round(fg * 9)
-        ok = max(0, tot - (pk + ck + fk + fibk))
-        day_sum = pk + ck + fk + fibk + ok
+        day_sum = pk + ck + fk + fibk
         if day_sum > max_day_cal:
             max_day_cal = day_sum
 
@@ -150,7 +147,6 @@ def build_macro_calorie_chart_series(user, start_date, end_date, calorie_goal: i
         c_kcal.append(ck)
         f_kcal.append(fk)
         fib_kcal.append(fibk)
-        o_kcal.append(ok)
         p_g.append(round(pg, 1))
         c_g.append(round(cg, 1))
         f_g.append(round(fg, 1))
@@ -165,7 +161,6 @@ def build_macro_calorie_chart_series(user, start_date, end_date, calorie_goal: i
         "carbs_kcal": c_kcal,
         "fat_kcal": f_kcal,
         "fiber_kcal": fib_kcal,
-        "other_kcal": o_kcal,
         "protein_g": p_g,
         "carbs_g": c_g,
         "fat_g": f_g,

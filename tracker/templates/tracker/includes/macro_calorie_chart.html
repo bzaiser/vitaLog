@@ -11,7 +11,6 @@
     const dangerColor = styles.getPropertyValue("--bs-danger").trim() || "#dc3545";
 
     const goalSeries = d.goal_series || d.labels.map(() => d.goal);
-    const hasOther = d.other_kcal.some(v => v > 0);
 
     const datasets = [
         {
@@ -60,23 +59,11 @@
             data: d.fat_kcal,
             grams: d.fat_g,
             backgroundColor: "#fd7e14",
-            borderRadius: hasOther ? 0 : { topLeft: 4, topRight: 4 },
+            borderRadius: { topLeft: 4, topRight: 4 },
             stack: "macros",
             order: 1
         }
     ];
-
-    if (hasOther) {
-        datasets.push({
-            type: "bar",
-            label: "Sonstige kcal",
-            data: d.other_kcal,
-            backgroundColor: "#adb5bd",
-            borderRadius: { topLeft: 4, topRight: 4 },
-            stack: "macros",
-            order: 1
-        });
-    }
 
     new Chart(canvas, {
         data: { labels: d.labels, datasets: datasets },
@@ -96,7 +83,7 @@
                                 return `Tagesziel: ${val} kcal`;
                             }
                             const idx = ctx.dataIndex;
-                            const dayTotal = (d.protein_kcal[idx] + d.carbs_kcal[idx] + d.fat_kcal[idx] + d.fiber_kcal[idx] + d.other_kcal[idx]) || 1;
+                            const dayTotal = (d.protein_kcal[idx] + d.carbs_kcal[idx] + d.fat_kcal[idx] + d.fiber_kcal[idx]) || 1;
                             const pct = Math.round((val / dayTotal) * 100);
                             const gArr = ctx.dataset.grams;
                             if (gArr) {

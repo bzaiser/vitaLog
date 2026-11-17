@@ -1,0 +1,86 @@
+<style>
+    /* Einheitliche Pill-Rundung wie im Design-Studio-Menü & den Modals */
+    .btn:not(.btn-close) {
+        border-radius: 999px;
+    }
+    body[data-card-surface="brutal"] .btn:not(.btn-close) {
+        border-radius: 8px;
+    }
+
+    /* btn-group: nur außen rund, innen bündig */
+    .btn-group > .btn:not(:first-child):not(:last-child) {
+        border-radius: 0;
+    }
+    .btn-group > .btn:first-child:not(:last-child) {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+    .btn-group > .btn:last-child:not(:first-child) {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+    }
+
+    /* input-group: außen pill-rund, innen bündig */
+    .input-group > .input-group-text:first-child {
+        border-top-left-radius: 999px;
+        border-bottom-left-radius: 999px;
+    }
+    .input-group > .btn:last-child {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+        border-top-right-radius: 999px;
+        border-bottom-right-radius: 999px;
+    }
+
+    /* Primary Buttons: Design Studio Gradient */
+    .btn-primary {
+        --bs-btn-bg: var(--app-primary, #0d6efd);
+        --bs-btn-border-color: var(--app-primary, #0d6efd);
+        --bs-btn-hover-bg: color-mix(in srgb, var(--app-primary, #0d6efd) 85%, #000);
+        --bs-btn-hover-border-color: color-mix(in srgb, var(--app-primary, #0d6efd) 85%, #000);
+        --bs-btn-active-bg: color-mix(in srgb, var(--app-primary, #0d6efd) 80%, #000);
+        --bs-btn-active-border-color: color-mix(in srgb, var(--app-primary, #0d6efd) 80%, #000);
+        background: var(--app-gradient, var(--app-primary, #0d6efd));
+        border-color: transparent;
+        color: #ffffff;
+    }
+    .btn-primary:hover,
+    .btn-primary:focus-visible,
+    .btn-primary:active {
+        background: linear-gradient(135deg, rgba(0, 0, 0, 0.14) 0%, rgba(0, 0, 0, 0.14) 100%), var(--app-gradient, var(--app-primary, #0d6efd));
+        border-color: transparent;
+        color: #ffffff;
+    }
+
+    /* Akzent-Outline-Buttons */
+    .btn-outline-primary,
+    .btn-outline-info,
+    .btn-outline-success {
+        --bs-btn-color: var(--app-primary, #0d6efd);
+        --bs-btn-border-color: var(--app-primary, #0d6efd);
+        --bs-btn-hover-bg: var(--app-primary, #0d6efd);
+        --bs-btn-hover-border-color: var(--app-primary, #0d6efd);
+        --bs-btn-hover-color: #ffffff;
+        --bs-btn-active-bg: var(--app-primary, #0d6efd);
+        --bs-btn-active-border-color: var(--app-primary, #0d6efd);
+        --bs-btn-active-color: #ffffff;
+    }
+
+    /* Sekundäre Buttons (Abbrechen, Tag wählen, Alle, CSV-Export, Keine) */
+    .btn-outline-secondary {
+        --bs-btn-color: var(--app-card-color, #212529);
+        --bs-btn-bg: color-mix(in srgb, var(--app-primary, #0d6efd) 4%, transparent);
+        --bs-btn-border-color: color-mix(in srgb, var(--app-primary, #0d6efd) 28%, var(--app-table-border-color, rgba(128, 128, 128, 0.3)));
+        --bs-btn-hover-color: var(--app-primary, #0d6efd);
+        --bs-btn-hover-bg: color-mix(in srgb, var(--app-primary, #0d6efd) 14%, transparent);
+        --bs-btn-hover-border-color: var(--app-primary, #0d6efd);
+        --bs-btn-active-color: #ffffff;
+        --bs-btn-active-bg: var(--app-primary, #0d6efd);
+        --bs-btn-active-border-color: var(--app-primary, #0d6efd);
+    }
+
+    .form-check-input:checked {
+        background-color: var(--app-primary, #0d6efd);
+        border-color: var(--app-primary, #0d6efd);
+    }
+</style>

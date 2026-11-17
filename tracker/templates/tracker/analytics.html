@@ -1,6 +1,7 @@
 {% extends "design_studio/layouts/dashboard.html" %}
 
 {% block title %}Auswertungen - {{ design_studio_app_name }}{% endblock %}
+{% block head_extra %}{% include "tracker/includes/theme_overrides.html" %}{% endblock %}
 {% block page_title %}Auswertungen &amp; Export{% endblock %}
 {% block page_subtitle %}Zeitraum: {{ start_date|date:"d.m.Y" }} – {{ today|date:"d.m.Y" }} ({{ days_count }} Tage){% endblock %}
 

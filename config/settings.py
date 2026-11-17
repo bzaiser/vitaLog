@@ -9,18 +9,20 @@ from urllib.parse import urlparse
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get(
+SECRET_KEY = os.environ.get("SECRET_KEY") or os.environ.get(
     "DJANGO_SECRET_KEY",
     "django-insecure-7mlsq0st)28=_g5k(tz#$=&$y3b^&xf)khp46r!i6p%b32uxl1",
 )
 
-DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() in ("1", "true", "yes")
+DEBUG = (os.environ.get("DEBUG") or os.environ.get("DJANGO_DEBUG", "True")).lower() in ("1", "true", "yes")
 
-ALLOWED_HOSTS = [
-    h.strip()
-    for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
-    if h.strip()
-]
+_raw_hosts = os.environ.get("ALLOWED_HOSTS") or os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
+ALLOWED_HOSTS = [h.strip() for h in _raw_hosts.split(",") if h.strip()]
+
+_raw_csrf = os.environ.get("CSRF_TRUSTED_ORIGINS", "https://vitalog.greatsmallstuff.de")
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in _raw_csrf.split(",") if o.strip()]
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -29,8 +31,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "design_studio",
     "tracker",
+    "design_studio",
 ]
 
 MIDDLEWARE = [
@@ -128,7 +130,7 @@ LOGIN_REDIRECT_URL = "tracker:dashboard"
 LOGOUT_REDIRECT_URL = "tracker:login"
 
 # Design Studio Konfiguration
-DESIGN_STUDIO_APP_NAME = "Kalorien & Gewicht"
+DESIGN_STUDIO_APP_NAME = "vitaLog"
 DESIGN_STUDIO_MENU_ITEMS = [
     {
         "id": "dashboard",
@@ -228,7 +230,7 @@ DESIGN_STUDIO_MENU_ITEMS = [
         "default_label": "Admin",
         "icon": "bi-shield-lock",
         "zone": "utility",
-        "display": "icon_only",
+        "display": "icon_text",
         "order": 4,
         "staff_only": True,
     },

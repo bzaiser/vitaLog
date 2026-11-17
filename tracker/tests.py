@@ -58,7 +58,24 @@ class TrackerViewsTest(TestCase):
 
     def test_registration_flow(self):
         self.client.logout()
+        # Erster Benutzer ohne vorhandenen Superuser wird automatisch Admin
         resp = self.client.post(
+            reverse("tracker:register"),
+            {
+                "username": "firstadmin",
+                "email": "admin@example.com",
+                "password1": "StrongPass123!",
+                "password2": "StrongPass123!",
+            },
+        )
+        self.assertRedirects(resp, reverse("tracker:dashboard"))
+        first_user = User.objects.get(username="firstadmin")
+        self.assertTrue(first_user.is_staff)
+        self.assertTrue(first_user.is_superuser)
+
+        # Zweiter Benutzer bleibt normaler Benutzer
+        self.client.logout()
+        resp2 = self.client.post(
             reverse("tracker:register"),
             {
                 "username": "newuser",
@@ -67,8 +84,10 @@ class TrackerViewsTest(TestCase):
                 "password2": "StrongPass123!",
             },
         )
-        self.assertRedirects(resp, reverse("tracker:dashboard"))
-        self.assertTrue(User.objects.filter(username="newuser").exists())
+        self.assertRedirects(resp2, reverse("tracker:dashboard"))
+        second_user = User.objects.get(username="newuser")
+        self.assertFalse(second_user.is_staff)
+        self.assertFalse(second_user.is_superuser)
 
     def test_dashboard_renders_kpis(self):
         today = timezone.localdate()
@@ -78,7 +97,7 @@ class TrackerViewsTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "78,4")
         self.assertContains(resp, "600")
-        self.assertContains(resp, "Kalorien &amp; Gewicht")
+        self.assertContains(resp, "vitaLog")
 
     def test_meals_crud_filter_and_csv_export(self):
         today = timezone.localdate().isoformat()
@@ -279,7 +298,7 @@ class TrackerViewsTest(TestCase):
         self.assertEqual(series["carbs_kcal"], [160])  # (50 - 10) * 4
         self.assertEqual(series["fiber_kcal"], [40])   # 10 * 4
         self.assertEqual(series["fat_kcal"], [180])
-        self.assertEqual(series["other_kcal"], [60])
+        self.assertNotIn("other_kcal", series)
         self.assertEqual(series["goal"], 2000)
         self.assertEqual(series["suggested_max"], 2200)
 
