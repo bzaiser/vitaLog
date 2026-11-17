@@ -7,6 +7,13 @@
 {% block page_subtitle %}Überblick für {{ today|date:"d.m.Y" }} &middot; {{ request.user.username }}{% endblock %}
 
 {% block page_actions %}
+<div class="btn-group" role="group" aria-label="Zeitraum">
+    <a href="?days=7" class="btn btn-sm {% if days_count == 7 %}btn-primary{% else %}btn-outline-primary{% endif %}">7 Tage</a>
+    <a href="?days=14" class="btn btn-sm {% if days_count == 14 %}btn-primary{% else %}btn-outline-primary{% endif %}">14 Tage</a>
+    <a href="?days=30" class="btn btn-sm {% if days_count == 30 %}btn-primary{% else %}btn-outline-primary{% endif %}">30 Tage</a>
+    <a href="?days=90" class="btn btn-sm {% if days_count == 90 %}btn-primary{% else %}btn-outline-primary{% endif %}">90 Tage</a>
+    <a href="?days=365" class="btn btn-sm {% if days_count == 365 %}btn-primary{% else %}btn-outline-primary{% endif %}">1 Jahr</a>
+</div>
 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#mealModal">
     <i class="bi bi-plus-lg me-1"></i>Mahlzeit
 </button>
@@ -36,23 +43,29 @@
     {% include "design_studio/components/kpi_card.html" with card_id="weight" title="Aktuelles Gewicht" value="–" unit="kg" icon="bi-activity" size="sm" accent="#0d6efd" target_url=weights_url subtitle="Noch kein Eintrag" %}
 {% endif %}
 
-{% with cal_sub="Ziel: "|add:calorie_goal|stringformat:"s"|add:" kcal" %}
-    {% include "design_studio/components/kpi_card.html" with card_id="calories" title="Tageskalorien" value=today_calories unit="kcal" icon="bi-fire" size="sm" accent="#6610f2" target_url=meals_url sparkline_line=cal_spark_line sparkline_area=cal_spark_area progress_segments=calorie_segments progress_label=calorie_ratio_pct|stringformat:"s"|add:"% vom Ziel" %}
-{% endwith %}
+{% include "design_studio/components/kpi_card.html" with card_id="calories" title="Tageskalorien" value=today_calories unit="kcal" icon="bi-fire" size="sm" accent="#6610f2" target_url=meals_url sparkline_line=cal_spark_line sparkline_area=cal_spark_area progress_segments=calorie_segments progress_label=calorie_progress_label %}
 
-{% include "design_studio/components/kpi_card.html" with card_id="remaining" title="Verbleibend heute" value=remaining_calories unit="kcal" icon="bi-bullseye" size="sm" accent="#198754" target_url=profile_url sparkline_line=cal_spark_line sparkline_area=cal_spark_area progress_segments=remaining_segments progress_label="Basis "|add:base_calorie_goal|stringformat:"s"|add:" + Beweg. "|add:today_activity_kcal|stringformat:"s"|add:" kcal" %}
+{% include "design_studio/components/kpi_card.html" with card_id="remaining" title="Verbleibend heute" value=remaining_calories unit="kcal" icon="bi-bullseye" size="sm" accent="#198754" target_url=profile_url sparkline_line=cal_spark_line sparkline_area=cal_spark_area progress_segments=remaining_segments progress_label=remaining_progress_label %}
 
 {% with fiber_val=today_fiber|floatformat:1 %}
-    {% include "design_studio/components/kpi_card.html" with card_id="fiber" title="Ballaststoffe heute" value=fiber_val unit="g" icon="bi-flower1" size="sm" accent="#20c997" target_url=meals_url sparkline_line=fiber_spark_line sparkline_area=fiber_spark_area progress_segments=fiber_segments progress_label=fiber_ratio_pct|stringformat:"s"|add:"% · Ziel "|add:fiber_goal_g|stringformat:"s"|add:" g" %}
+    {% include "design_studio/components/kpi_card.html" with card_id="fiber" title="Ballaststoffe heute" value=fiber_val unit="g" icon="bi-flower1" size="sm" accent="#20c997" target_url=meals_url sparkline_line=fiber_spark_line sparkline_area=fiber_spark_area progress_segments=fiber_segments progress_label=fiber_progress_label %}
 {% endwith %}
 
 {% if goal_progress_pct is not None %}
-    {% include "design_studio/components/kpi_card.html" with card_id="goal" title="Ziel-Fortschritt" value=goal_progress_pct unit="%" icon="bi-trophy" size="sm" accent="#fd7e14" target_url=profile_url sparkline_line=weight_spark_line sparkline_area=weight_spark_area progress_segments=goal_segments progress_label="Ziel: "|add:profile.target_weight_kg|stringformat:"s"|add:" kg" %}
+    {% include "design_studio/components/kpi_card.html" with card_id="goal" title="Abnehm-Bilanz" value=goal_progress_pct unit="%" icon="bi-trophy" size="sm" accent="#fd7e14" target_url=profile_url sparkline_line=weight_spark_line sparkline_area=weight_spark_area progress_segments=goal_segments progress_label=goal_progress_label %}
 {% else %}
-    {% include "design_studio/components/kpi_card.html" with card_id="avg7d" title="7-Tage-Schnitt" value=avg_7d_calories unit="kcal" icon="bi-graph-up" size="sm" accent="#fd7e14" target_url=analytics_url sparkline_line=cal_spark_line sparkline_area=cal_spark_area progress_segments=avg7d_segments progress_label=avg7d_pct|stringformat:"s"|add:"% vom Ziel" %}
+    {% include "design_studio/components/kpi_card.html" with card_id="avg7d" title="7-Tage-Schnitt" value=avg_7d_calories unit="kcal" icon="bi-graph-up" size="sm" accent="#fd7e14" target_url=analytics_url sparkline_line=cal_spark_line sparkline_area=cal_spark_area progress_segments=avg7d_segments progress_label=avg7d_progress_label %}
 {% endif %}
 
-{% include "design_studio/components/kpi_card.html" with card_id="water" title="Wasser heute" value=today_water_ml unit="ml" icon="bi-droplet" size="sm" accent="#0dcaf0" target_url=water_url sparkline_line=water_spark_line sparkline_area=water_spark_area progress_segments=water_segments progress_label=water_ratio_pct|stringformat:"s"|add:"% · Ziel "|add:water_goal_ml|stringformat:"s"|add:" ml" %}
+{% include "design_studio/components/kpi_card.html" with card_id="water" title="Wasser heute" value=today_water_ml unit="ml" icon="bi-droplet" size="sm" accent="#0dcaf0" target_url=water_url sparkline_line=water_spark_line sparkline_area=water_spark_area progress_segments=water_segments progress_label=water_progress_label %}
+
+{% if current_body_fat is not None %}
+    {% with bf_val=current_body_fat|floatformat:1 %}
+        {% include "design_studio/components/kpi_card.html" with card_id="bodyfat" title="Körperfett" value=bf_val unit="%" icon="bi-percent" size="sm" accent="#e83e8c" target_url=weights_url sparkline_line=bf_spark_line sparkline_area=bf_spark_area progress_segments=bf_segments progress_label=bf_progress_label subtitle="Letzte Messung" %}
+    {% endwith %}
+{% else %}
+    {% include "design_studio/components/kpi_card.html" with card_id="bodyfat" title="Körperfett" value="–" unit="%" icon="bi-percent" size="sm" accent="#e83e8c" target_url=weights_url subtitle="Noch kein KFA-Wert" %}
+{% endif %}
 {% endblock %}
 
 {% block dashboard_charts %}
@@ -97,7 +110,7 @@
 <div class="col-lg-6">
     <div class="card shadow-sm h-100">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <span class="fw-semibold"><i class="bi bi-activity me-2"></i>Gewichtsverlauf (14 Tage)</span>
+            <span class="fw-semibold"><i class="bi bi-activity me-2"></i>Gewichtsverlauf ({{ days_count }} Tage)</span>
             <a href="{% url 'tracker:weights_list' %}" class="btn btn-sm btn-outline-secondary">Alle</a>
         </div>
         <div class="card-body">
@@ -108,7 +121,7 @@
 <div class="col-lg-6">
     <div class="card shadow-sm h-100">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <span class="fw-semibold"><i class="bi bi-fire me-2"></i>Makros, Ballaststoffe &amp; Zielkalorien (14 Tage)</span>
+            <span class="fw-semibold"><i class="bi bi-fire me-2"></i>Makros, Ballaststoffe &amp; Zielkalorien ({{ days_count }} Tage)</span>
             <a href="{% url 'tracker:meals_list' %}" class="btn btn-sm btn-outline-secondary">Alle</a>
         </div>
         <div class="card-body">
@@ -119,7 +132,7 @@
 <div class="col-12">
     <div class="card shadow-sm">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <span class="fw-semibold"><i class="bi bi-smartwatch me-2"></i>Bewegung über die Zeit (14 Tage) <span class="text-muted small fw-normal">(Balken anklicken zum Ändern)</span></span>
+            <span class="fw-semibold"><i class="bi bi-smartwatch me-2"></i>Bewegung über die Zeit ({{ days_count }} Tage) <span class="text-muted small fw-normal">(Balken anklicken zum Ändern)</span></span>
             <button type="button" class="btn btn-sm btn-outline-primary" onclick="openActivityModal('{{ today|date:'Y-m-d' }}', '{{ today_activity_level }}', {{ today_activity_kcal }})">
                 <i class="bi bi-pencil me-1"></i>Ändern
             </button>

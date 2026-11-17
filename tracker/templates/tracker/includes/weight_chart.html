@@ -15,6 +15,7 @@
         type: "line",
         label: "Gewicht (kg)",
         data: d.values,
+        yAxisID: "y",
         borderColor: primary,
         backgroundColor: primary + "22",
         spanGaps: true,
@@ -24,11 +25,30 @@
         order: 1
     }];
 
+    const hasBodyFat = Array.isArray(d.body_fat_values) && d.body_fat_values.some(v => v !== null && v !== undefined);
+    if (hasBodyFat) {
+        datasets.push({
+            type: "line",
+            label: "Körperfett (%)",
+            data: d.body_fat_values,
+            yAxisID: "y1",
+            borderColor: "#fd7e14",
+            backgroundColor: "#fd7e1422",
+            borderDash: [4, 3],
+            spanGaps: true,
+            tension: 0.3,
+            fill: false,
+            pointRadius: 3,
+            order: 0
+        });
+    }
+
     if (d.target !== null && d.target !== undefined) {
         datasets.push({
             type: "line",
             label: "Zielgewicht (" + d.target + " kg)",
             data: d.labels.map(() => d.target),
+            yAxisID: "y",
             borderColor: successColor,
             borderDash: [6, 4],
             pointRadius: 0,
@@ -38,6 +58,7 @@
     }
 
     const yScale = {
+        position: "left",
         beginAtZero: false,
         ticks: {
             color: bodyColor,
@@ -47,6 +68,26 @@
     if (d.suggested_min !== null) yScale.suggestedMin = d.suggested_min;
     if (d.suggested_max !== null) yScale.suggestedMax = d.suggested_max;
 
+    const scales = {
+        x: { ticks: { color: bodyColor } },
+        y: yScale
+    };
+
+    if (hasBodyFat) {
+        const y1Scale = {
+            position: "right",
+            beginAtZero: false,
+            grid: { drawOnChartArea: false },
+            ticks: {
+                color: "#fd7e14",
+                callback: function(v) { return v + " %"; }
+            }
+        };
+        if (d.bf_suggested_min !== null) y1Scale.suggestedMin = d.bf_suggested_min;
+        if (d.bf_suggested_max !== null) y1Scale.suggestedMax = d.bf_suggested_max;
+        scales.y1 = y1Scale;
+    }
+
     new Chart(canvas, {
         data: { labels: d.labels, datasets: datasets },
         options: {
@@ -54,15 +95,12 @@
             interaction: { mode: "index", intersect: false },
             plugins: {
                 legend: {
-                    display: d.target !== null && d.target !== undefined,
+                    display: hasBodyFat || (d.target !== null && d.target !== undefined),
                     position: "bottom",
                     labels: { color: bodyColor, boxWidth: 12 }
                 }
             },
-            scales: {
-                x: { ticks: { color: bodyColor } },
-                y: yScale
-            }
+            scales: scales
         }
     });
 })();

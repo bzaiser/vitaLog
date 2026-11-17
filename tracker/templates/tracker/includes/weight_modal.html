@@ -35,6 +35,10 @@
                         <div class="col-12">
                             <label class="form-label" for="{{ weight_form.body_fat_pct.id_for_label }}">{{ weight_form.body_fat_pct.label }}</label>
                             {{ weight_form.body_fat_pct }}
+                            <div id="bfEstimateHint" class="form-text d-none d-flex justify-content-between align-items-center mt-1">
+                                <span>Schätzwert (Größe/Alter/Geschlecht/Aktivität): <strong id="bfEstimateVal">–</strong> %</span>
+                                <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" onclick="applyEstimatedBodyFat()">Übernehmen</button>
+                            </div>
                         </div>
                         <div class="col-12">
                             <label class="form-label" for="{{ weight_form.notes.id_for_label }}">{{ weight_form.notes.label }}</label>
@@ -54,6 +58,7 @@
 </div>
 {{ weight_modal_daily_map|json_script:"ds-weight-daily-cal-map" }}
 {{ weight_modal_activity_map|json_script:"ds-weight-daily-act-map" }}
+{{ weight_modal_bf_profile|json_script:"ds-weight-bf-profile" }}
 <script>
 (function() {
     const mapEl = document.getElementById("ds-weight-daily-cal-map");
@@ -61,9 +66,55 @@
     const dailyMap = JSON.parse(mapEl.textContent || "{}");
     const actEl = document.getElementById("ds-weight-daily-act-map");
     const actMap = actEl ? JSON.parse(actEl.textContent || "{}") : {};
+    const bfProfEl = document.getElementById("ds-weight-bf-profile");
+    const bfProf = bfProfEl ? JSON.parse(bfProfEl.textContent || "{}") : {};
     const baseGoal = parseInt("{{ weight_modal_base_goal|default:2000 }}", 10);
     const modal = document.getElementById("weightModal");
     const dateInput = modal ? modal.querySelector("input[name='date']") : null;
+    const weightInput = modal ? modal.querySelector("input[name='weight_kg']") : null;
+    const bfInput = modal ? modal.querySelector("input[name='body_fat_pct']") : null;
+    const actionInput = document.getElementById("weightModalAction");
+    let bfManuallyEdited = false;
+
+    function estimateBodyFat(weightKg) {
+        if (!bfProf.height_cm || !bfProf.age || !weightKg || weightKg <= 0) return null;
+        const hM = bfProf.height_cm / 100.0;
+        const bmi = weightKg / (hM * hM);
+        const sex = bfProf.gender === "M" ? 1.0 : (bfProf.gender === "W" ? 0.0 : 0.5);
+        let bf = 1.20 * bmi + 0.23 * bfProf.age - 10.8 * sex - 5.4;
+        const act = parseFloat(bfProf.activity_level || 1.37);
+        if (act >= 1.90) bf -= 3.0;
+        else if (act >= 1.72) bf -= 2.0;
+        else if (act >= 1.55) bf -= 1.0;
+        bf = Math.max(4.0, Math.min(60.0, bf));
+        return Math.round(bf * 10) / 10;
+    }
+
+    function updateBodyFatEstimate() {
+        const hint = document.getElementById("bfEstimateHint");
+        const valEl = document.getElementById("bfEstimateVal");
+        if (!hint || !valEl || !weightInput) return;
+        const w = parseFloat((weightInput.value || "").replace(",", "."));
+        const est = estimateBodyFat(w);
+        if (est === null) {
+            hint.classList.add("d-none");
+            return;
+        }
+        valEl.textContent = est.toFixed(1).replace(".", ",");
+        hint.classList.remove("d-none");
+        if (bfInput && actionInput && actionInput.value === "create" && !bfManuallyEdited) {
+            bfInput.value = est.toFixed(1);
+        }
+    }
+
+    window.applyEstimatedBodyFat = function() {
+        const w = parseFloat((weightInput?.value || "").replace(",", "."));
+        const est = estimateBodyFat(w);
+        if (est !== null && bfInput) {
+            bfInput.value = est.toFixed(1);
+            bfManuallyEdited = false;
+        }
+    };
 
     function updateCalorieInfo() {
         if (!dateInput) return;
@@ -76,9 +127,19 @@
         document.getElementById("weightModalRemaining").textContent = rem;
     }
 
+    if (bfInput) {
+        bfInput.addEventListener("input", () => { bfManuallyEdited = bfInput.value.trim() !== ""; });
+    }
+    if (weightInput) {
+        weightInput.addEventListener("input", updateBodyFatEstimate);
+    }
     if (dateInput) {
         dateInput.addEventListener("change", updateCalorieInfo);
-        modal.addEventListener("shown.bs.modal", updateCalorieInfo);
+        modal.addEventListener("shown.bs.modal", () => {
+            bfManuallyEdited = actionInput && actionInput.value === "update";
+            updateCalorieInfo();
+            updateBodyFatEstimate();
+        });
     }
 })();
 </script>

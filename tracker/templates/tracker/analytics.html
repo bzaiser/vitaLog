@@ -30,7 +30,7 @@
 {% url 'tracker:weights_list' as weights_url %}
 {% url 'tracker:water_list' as water_url %}
 
-{% include "design_studio/components/kpi_card.html" with card_id="a_avg" title="Ø Tageskalorien" value=avg_daily_calories unit="kcal" icon="bi-fire" size="sm" accent="#6610f2" target_url=meals_url sparkline_line=cal_spark_line sparkline_area=cal_spark_area progress_segments=avg_cal_segments progress_label=avg_cal_pct|stringformat:"s"|add:"% vom Ziel ("|add:profile.daily_calorie_goal|stringformat:"s"|add:" kcal)" %}
+{% include "design_studio/components/kpi_card.html" with card_id="a_avg" title="Ø Tageskalorien" value=avg_daily_calories unit="kcal" icon="bi-fire" size="sm" accent="#6610f2" target_url=meals_url sparkline_line=cal_spark_line sparkline_area=cal_spark_area progress_segments=avg_cal_segments progress_label=avg_cal_progress_label %}
 {% include "design_studio/components/kpi_card.html" with card_id="a_total" title="Gesamtkalorien" value=meal_stats.total_calories|default:0 unit="kcal" icon="bi-egg-fried" size="sm" accent="#0d6efd" target_url=meals_url sparkline_line=cal_spark_line sparkline_area=cal_spark_area subtitle=meal_count|stringformat:"s"|add:" Mahlzeiten" %}
 {% if weight_delta is not None %}
     {% with delta_val=weight_delta|floatformat:1 %}
@@ -42,9 +42,18 @@
 {% with prot=meal_stats.total_protein|default:0|floatformat:0 %}
     {% include "design_studio/components/kpi_card.html" with card_id="a_prot" title="Eiweiß gesamt" value=prot unit="g" icon="bi-pie-chart" size="sm" accent="#fd7e14" target_url=meals_url sparkline_line=prot_spark_line sparkline_area=prot_spark_area subtitle="KH: "|add:meal_stats.total_carbs|default:0|floatformat:0|add:" g · Fett: "|add:meal_stats.total_fat|default:0|floatformat:0|add:" g" %}
 {% endwith %}
-{% include "design_studio/components/kpi_card.html" with card_id="a_fiber" title="Ø Ballaststoffe / Tag" value=avg_daily_fiber unit="g" icon="bi-flower1" size="sm" accent="#20c997" target_url=meals_url sparkline_line=fiber_spark_line sparkline_area=fiber_spark_area progress_segments=avg_fiber_segments progress_label=avg_fiber_pct|stringformat:"s"|add:"% · Ziel "|add:fiber_goal_g|stringformat:"s"|add:" g" %}
-{% include "design_studio/components/kpi_card.html" with card_id="a_water" title="Ø Wasser / Tag" value=avg_daily_water_ml unit="ml" icon="bi-droplet" size="sm" accent="#0dcaf0" target_url=water_url sparkline_line=water_spark_line sparkline_area=water_spark_area progress_segments=avg_water_segments progress_label=avg_water_pct|stringformat:"s"|add:"% · Ziel "|add:water_goal_ml|stringformat:"s"|add:" ml" %}
+{% include "design_studio/components/kpi_card.html" with card_id="a_fiber" title="Ø Ballaststoffe / Tag" value=avg_daily_fiber unit="g" icon="bi-flower1" size="sm" accent="#20c997" target_url=meals_url sparkline_line=fiber_spark_line sparkline_area=fiber_spark_area progress_segments=avg_fiber_segments progress_label=avg_fiber_progress_label %}
+{% include "design_studio/components/kpi_card.html" with card_id="a_water" title="Ø Wasser / Tag" value=avg_daily_water_ml unit="ml" icon="bi-droplet" size="sm" accent="#0dcaf0" target_url=water_url sparkline_line=water_spark_line sparkline_area=water_spark_area progress_segments=avg_water_segments progress_label=avg_water_progress_label %}
 {% include "design_studio/components/kpi_card.html" with card_id="a_activity" title="Bewegung gesamt" value=total_activity_kcal unit="kcal" icon="bi-smartwatch" size="sm" accent="#6f42c1" target_url=dashboard_url sparkline_line=activity_spark_line sparkline_area=activity_spark_area subtitle="Ø "|add:avg_activity_kcal|stringformat:"s"|add:" kcal/Tag · "|add:active_days_count|stringformat:"s"|add:" aktive Tage" %}
+{% if body_fat_delta is not None %}
+    {% with bf_d=body_fat_delta|floatformat:1 %}
+        {% include "design_studio/components/kpi_card.html" with card_id="a_bf" title="Körperfett-Trend" value=bf_d unit="%-Pkt." icon="bi-percent" size="sm" accent="#e83e8c" target_url=weights_url sparkline_line=bf_spark_line sparkline_area=bf_spark_area subtitle="Aktuell: "|add:current_body_fat|floatformat:1|add:" %" %}
+    {% endwith %}
+{% elif current_body_fat is not None %}
+    {% with bf_c=current_body_fat|floatformat:1 %}
+        {% include "design_studio/components/kpi_card.html" with card_id="a_bf" title="Körperfett" value=bf_c unit="%" icon="bi-percent" size="sm" accent="#e83e8c" target_url=weights_url sparkline_line=bf_spark_line sparkline_area=bf_spark_area subtitle="Letzte Messung" %}
+    {% endwith %}
+{% endif %}
 {% endblock %}
 
 {% block dashboard_charts %}

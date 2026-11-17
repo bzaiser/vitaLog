@@ -67,6 +67,13 @@ class UserProfile(models.Model):
         blank=True,
         verbose_name="Zielgewicht (kg)",
     )
+    target_body_fat_pct = models.DecimalField(
+        max_digits=4,
+        decimal_places=1,
+        null=True,
+        blank=True,
+        verbose_name="Ziel-Körperfett (%)",
+    )
     daily_calorie_goal = models.PositiveIntegerField(
         default=2000,
         verbose_name="Tägliches Kalorienziel (kcal)",
@@ -129,6 +136,29 @@ class UserProfile(models.Model):
         """Berechnet die tägliche Ballaststoff-Empfehlung (DGE: ~14 g pro 1.000 kcal)."""
         cal_goal = self.daily_calorie_goal or 2000
         return max(25, round(cal_goal / 1000 * 14))
+
+    def estimate_body_fat_pct(self, weight_kg: Decimal | None = None) -> Decimal | None:
+        """Schätzt den Körperfettanteil (%) aus Größe, Alter, Gewicht, Geschlecht & Bewegungsmuster."""
+        ref_weight = weight_kg or self.start_weight_kg
+        if not (ref_weight and self.height_cm and self.age):
+            return None
+        height_m = float(self.height_cm) / 100.0
+        if height_m <= 0:
+            return None
+        bmi = float(ref_weight) / (height_m * height_m)
+        sex_factor = 1.0 if self.gender == "M" else (0.0 if self.gender == "W" else 0.5)
+        raw_bf = 1.20 * bmi + 0.23 * float(self.age) - 10.8 * sex_factor - 5.4
+
+        act = float(self.activity_level or Decimal("1.37"))
+        if act >= 1.90:
+            raw_bf -= 3.0
+        elif act >= 1.72:
+            raw_bf -= 2.0
+        elif act >= 1.55:
+            raw_bf -= 1.0
+
+        clamped = max(4.0, min(60.0, raw_bf))
+        return Decimal(str(round(clamped, 1)))
 
 
 @receiver(post_save, sender=User)

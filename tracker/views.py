@@ -69,7 +69,11 @@ def logout_view(request):
 
 @login_required
 def dashboard_view(request):
-    context = get_dashboard_context(request.user)
+    try:
+        days_count = int(request.GET.get("days", 14))
+    except (TypeError, ValueError):
+        days_count = 14
+    context = get_dashboard_context(request.user, days_count=days_count)
     context["meal_form"] = MealEntryForm(initial={"date": timezone.localdate()})
     context["weight_form"] = WeightEntryForm(initial={"date": timezone.localdate()})
     context["water_form"] = WaterEntryForm(initial={"date": timezone.localdate(), "amount_ml": 250})
@@ -474,6 +478,24 @@ def analytics_view(request):
         weight_delta = weight_list[0].weight_kg - baseline_weight.weight_kg
 
     weight_chart = build_weight_chart_series(request.user, start_date, today, profile.target_weight_kg)
+    bf_list = [w for w in weight_list if w.body_fat_pct is not None]
+    bf_baseline = (
+        WeightEntry.objects.filter(user=request.user, date__lt=start_date, body_fat_pct__isnull=False)
+        .order_by("-date", "-created_at")
+        .first()
+    )
+    body_fat_delta = None
+    if len(bf_list) >= 2:
+        first_bf = bf_baseline.body_fat_pct if bf_baseline and bf_list[0].date > start_date else bf_list[0].body_fat_pct
+        body_fat_delta = round(float(bf_list[-1].body_fat_pct - first_bf), 1)
+    elif len(bf_list) == 1 and bf_baseline:
+        body_fat_delta = round(float(bf_list[0].body_fat_pct - bf_baseline.body_fat_pct), 1)
+
+    latest_bf_entry = bf_list[-1] if bf_list else WeightEntry.objects.filter(user=request.user, body_fat_pct__isnull=False).first()
+    current_body_fat = latest_bf_entry.body_fat_pct if latest_bf_entry else None
+    bf_spark_line, bf_spark_area = build_sparkline_paths(
+        [float(v) for v in weight_chart["body_fat_values"] if v is not None]
+    )
 
     category_breakdown = list(
         meals_qs.values("category")
@@ -530,6 +552,10 @@ def analytics_view(request):
     avg_cal_ratio = avg_daily_calories / cal_goal if cal_goal > 0 else 0.0
     avg_water_ratio = avg_daily_water_ml / water_goal_ml if water_goal_ml > 0 else 0.0
 
+    avg_cal_pct = min(100, round(avg_cal_ratio * 100))
+    avg_water_pct = min(100, round(avg_water_ratio * 100))
+    avg_fiber_pct = min(100, round(avg_fiber_ratio * 100))
+
     return render(
         request,
         "tracker/analytics.html",
@@ -542,8 +568,9 @@ def analytics_view(request):
             "weight_count": weights_qs.count(),
             "meal_stats": meal_stats,
             "avg_daily_calories": avg_daily_calories,
-            "avg_cal_pct": min(100, round(avg_cal_ratio * 100)),
+            "avg_cal_pct": avg_cal_pct,
             "avg_cal_segments": build_progress_segments(avg_cal_ratio),
+            "avg_cal_progress_label": f"{avg_cal_pct}% · Ziel {cal_goal} kcal",
             "weight_delta": weight_delta,
             "latest_weight": weight_list[-1] if weight_list else None,
             "category_breakdown": category_breakdown,
@@ -551,8 +578,9 @@ def analytics_view(request):
             "total_water_ml": total_water_ml,
             "avg_daily_water_ml": avg_daily_water_ml,
             "water_goal_ml": water_goal_ml,
-            "avg_water_pct": min(100, round(avg_water_ratio * 100)),
+            "avg_water_pct": avg_water_pct,
             "avg_water_segments": build_progress_segments(avg_water_ratio),
+            "avg_water_progress_label": f"{avg_water_pct}% · Ziel {water_goal_ml} ml",
             "water_chart_data": water_chart,
             "weight_chart_data": weight_chart,
             "cal_spark_line": cal_spark_line,
@@ -561,12 +589,17 @@ def analytics_view(request):
             "prot_spark_area": prot_spark_area,
             "fiber_goal_g": fiber_goal_g,
             "avg_daily_fiber": avg_daily_fiber,
-            "avg_fiber_pct": min(100, round(avg_fiber_ratio * 100)),
+            "avg_fiber_pct": avg_fiber_pct,
             "avg_fiber_segments": build_progress_segments(avg_fiber_ratio),
+            "avg_fiber_progress_label": f"{avg_fiber_pct}% · Ziel {fiber_goal_g} g",
             "fiber_spark_line": fiber_spark_line,
             "fiber_spark_area": fiber_spark_area,
             "weight_spark_line": weight_spark_line,
             "weight_spark_area": weight_spark_area,
+            "current_body_fat": current_body_fat,
+            "body_fat_delta": body_fat_delta,
+            "bf_spark_line": bf_spark_line,
+            "bf_spark_area": bf_spark_area,
             "water_spark_line": water_spark_line,
             "water_spark_area": water_spark_area,
             "total_activity_kcal": total_activity_kcal,

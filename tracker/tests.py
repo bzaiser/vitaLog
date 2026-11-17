@@ -99,6 +99,10 @@ class TrackerViewsTest(TestCase):
         self.assertContains(resp, "600")
         self.assertContains(resp, "vitaLog")
 
+        resp_30 = self.client.get(reverse("tracker:dashboard"), {"days": 30})
+        self.assertEqual(resp_30.status_code, 200)
+        self.assertContains(resp_30, "Gewichtsverlauf (30 Tage)")
+
     def test_meals_crud_filter_and_csv_export(self):
         today = timezone.localdate().isoformat()
         # Create
@@ -376,6 +380,9 @@ class TrackerViewsTest(TestCase):
             self.assertContains(resp, "kpi-sparkline-svg")
             self.assertContains(resp, "kpi-segmented-wrap")
             self.assertContains(resp, "data-target-url=")
+        dash = self.client.get(reverse("tracker:dashboard"))
+        self.assertContains(dash, "Basis 2000 + Beweg. 0 kcal")
+        self.assertEqual(len(dash.context["calorie_segments"]), 10)
 
     def test_daily_activity_presets_and_apple_watch_custom(self):
         today = timezone.localdate()
@@ -419,6 +426,31 @@ class TrackerViewsTest(TestCase):
         an_resp = self.client.get(reverse("tracker:analytics"), {"days": 7})
         self.assertContains(an_resp, "an-activity-chart-data")
         self.assertContains(an_resp, "745")
+
+    def test_body_fat_estimation_and_trend_views(self):
+        today = timezone.localdate()
+        self.user.profile.height_cm = 180
+        self.user.profile.age = 35
+        self.user.profile.gender = "M"
+        self.user.profile.activity_level = Decimal("1.55")
+        self.user.profile.target_body_fat_pct = Decimal("15.0")
+        self.user.profile.save()
+
+        est = self.user.profile.estimate_body_fat_pct(Decimal("80.00"))
+        self.assertIsNotNone(est)
+        self.assertGreater(est, Decimal("10.0"))
+        self.assertLess(est, Decimal("30.0"))
+
+        WeightEntry.objects.create(user=self.user, date=today - timedelta(days=5), weight_kg=Decimal("82.00"), body_fat_pct=Decimal("20.5"))
+        WeightEntry.objects.create(user=self.user, date=today, weight_kg=Decimal("80.00"), body_fat_pct=Decimal("19.0"))
+
+        dash = self.client.get(reverse("tracker:dashboard"))
+        self.assertContains(dash, "19,0")
+        self.assertContains(dash, "ds-weight-bf-profile")
+
+        an = self.client.get(reverse("tracker:analytics"), {"days": 30})
+        self.assertContains(an, "Körperfett-Trend")
+        self.assertContains(an, "-1,5")
 
     def test_analytics_and_profile_views(self):
         today = timezone.localdate()

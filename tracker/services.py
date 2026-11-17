@@ -35,7 +35,7 @@ def build_sparkline_paths(values: list[float], width: int = 200, height: int = 4
     return line_path, area_path
 
 
-def build_progress_segments(ratio: float, total_segments: int = 12) -> list[bool]:
+def build_progress_segments(ratio: float, total_segments: int = 10) -> list[bool]:
     """Erzeugt eine Liste aktiver Segmente für die KPI-Fortschrittsanzeige."""
     clamped = max(0.0, min(1.0, ratio))
     active_count = round(clamped * total_segments)
@@ -84,6 +84,12 @@ def get_weight_modal_context(user) -> dict:
         "weight_modal_remaining": today_goal - today_calories,
         "weight_modal_daily_map": daily_map,
         "weight_modal_activity_map": activity_map,
+        "weight_modal_bf_profile": {
+            "height_cm": profile.height_cm,
+            "age": profile.age,
+            "gender": profile.gender,
+            "activity_level": float(profile.activity_level or Decimal("1.37")),
+        },
     }
 
 
@@ -173,7 +179,7 @@ def build_macro_calorie_chart_series(user, start_date, end_date, calorie_goal: i
 
 
 def build_weight_chart_series(user, start_date, end_date, target_weight_kg: Decimal | None = None) -> dict:
-    """Erzeugt tägliche Gewichtsserie inkl. Carry-Forward-Startwert und Y-Achsen-Grenzen."""
+    """Erzeugt tägliche Gewichts- & Körperfettserie inkl. Carry-Forward-Startwert und Y-Achsen-Grenzen."""
     num_days = (end_date - start_date).days + 1
     days = [start_date + timedelta(days=i) for i in range(num_days)]
 
@@ -182,6 +188,7 @@ def build_weight_chart_series(user, start_date, end_date, target_weight_kg: Deci
         .order_by("date", "created_at")
     )
     weight_by_day = {e.date: float(e.weight_kg) for e in entries}
+    bf_by_day = {e.date: float(e.body_fat_pct) for e in entries if e.body_fat_pct is not None}
 
     if start_date not in weight_by_day:
         baseline = (
@@ -191,22 +198,40 @@ def build_weight_chart_series(user, start_date, end_date, target_weight_kg: Deci
         )
         if baseline:
             weight_by_day[start_date] = float(baseline.weight_kg)
+            if baseline.body_fat_pct is not None and start_date not in bf_by_day:
+                bf_by_day[start_date] = float(baseline.body_fat_pct)
+
+    if start_date not in bf_by_day:
+        bf_baseline = (
+            WeightEntry.objects.filter(user=user, date__lt=start_date, body_fat_pct__isnull=False)
+            .order_by("-date", "-created_at")
+            .first()
+        )
+        if bf_baseline:
+            bf_by_day[start_date] = float(bf_baseline.body_fat_pct)
 
     values = [weight_by_day.get(d) for d in days]
+    bf_values = [bf_by_day.get(d) for d in days]
     numeric_vals = [v for v in values if v is not None]
+    bf_numeric = [v for v in bf_values if v is not None]
     target_val = float(target_weight_kg) if target_weight_kg is not None else None
     if target_val is not None:
         numeric_vals.append(target_val)
 
     suggested_min = round(min(numeric_vals) - 1.0, 1) if numeric_vals else None
     suggested_max = round(max(numeric_vals) + 1.0, 1) if numeric_vals else None
+    bf_suggested_min = round(max(0.0, min(bf_numeric) - 1.5), 1) if bf_numeric else None
+    bf_suggested_max = round(max(bf_numeric) + 1.5, 1) if bf_numeric else None
 
     return {
         "labels": [d.strftime("%d.%m.") for d in days],
         "values": values,
+        "body_fat_values": bf_values,
         "target": target_val,
         "suggested_min": suggested_min,
         "suggested_max": suggested_max,
+        "bf_suggested_min": bf_suggested_min,
+        "bf_suggested_max": bf_suggested_max,
     }
 
 
@@ -252,8 +277,10 @@ def build_water_chart_series(user, start_date, end_date, water_goal_ml: int) -> 
     }
 
 
-def get_dashboard_context(user) -> dict:
+def get_dashboard_context(user, days_count: int = 14) -> dict:
     """Berechnet alle KPIs, Trenddaten und Tabellen für das Dashboard."""
+    if days_count not in (7, 14, 30, 90, 365):
+        days_count = 14
     today = timezone.localdate()
     profile = get_or_create_profile(user)
 
@@ -306,9 +333,9 @@ def get_dashboard_context(user) -> dict:
         elif current_weight == profile.target_weight_kg:
             goal_progress_pct = 100
 
-    # 14-Tage-Trend für Sparklines & Charts
-    start_date = today - timedelta(days=13)
-    days = [start_date + timedelta(days=i) for i in range(14)]
+    # Trend-Zeitraum für Sparklines & Charts
+    start_date = today - timedelta(days=days_count - 1)
+    days = [start_date + timedelta(days=i) for i in range(days_count)]
     day_labels = [d.strftime("%d.%m.") for d in days]
 
     meal_by_day = {
@@ -326,6 +353,33 @@ def get_dashboard_context(user) -> dict:
         all_recent = list(WeightEntry.objects.filter(user=user).order_by("-date", "-created_at")[:14])
         weight_values_for_spark = [float(e.weight_kg) for e in reversed(all_recent)]
     weight_spark_line, weight_spark_area = build_sparkline_paths(weight_values_for_spark)
+
+    bf_latest = WeightEntry.objects.filter(user=user, body_fat_pct__isnull=False).first()
+    bf_prev = WeightEntry.objects.filter(user=user, body_fat_pct__isnull=False)[1:2].first()
+    current_body_fat = bf_latest.body_fat_pct if bf_latest else None
+    body_fat_delta = (
+        round(float(bf_latest.body_fat_pct - bf_prev.body_fat_pct), 1)
+        if bf_latest and bf_prev
+        else None
+    )
+    bf_values_for_spark = [v for v in weight_chart["body_fat_values"] if v is not None]
+    if len(bf_values_for_spark) < 2:
+        all_bf = list(WeightEntry.objects.filter(user=user, body_fat_pct__isnull=False).order_by("-date", "-created_at")[:14])
+        bf_values_for_spark = [float(e.body_fat_pct) for e in reversed(all_bf)]
+    bf_spark_line, bf_spark_area = build_sparkline_paths(bf_values_for_spark)
+
+    bf_segments = None
+    bf_progress_label = ""
+    if current_body_fat is not None and profile.target_body_fat_pct:
+        if current_body_fat <= profile.target_body_fat_pct:
+            bf_ratio = 1.0
+        else:
+            bf_ratio = float(profile.target_body_fat_pct / current_body_fat) if current_body_fat > 0 else 0.0
+        bf_segments = build_progress_segments(bf_ratio)
+        bf_progress_label = f"Ziel: {profile.target_body_fat_pct} %"
+    elif body_fat_delta is not None:
+        sign = "+" if body_fat_delta > 0 else ""
+        bf_progress_label = f"Trend: {sign}{body_fat_delta} %-Pkt."
 
     # 7-Tage-Durchschnitt Kalorien
     week_start = today - timedelta(days=6)
@@ -357,20 +411,33 @@ def get_dashboard_context(user) -> dict:
     remaining_ratio = max(0.0, remaining_calories / calorie_goal) if calorie_goal > 0 else 0.0
     avg7d_ratio = (avg_7d_calories / calorie_goal) if calorie_goal > 0 else 0.0
 
+    cal_pct = min(100, round(calorie_ratio * 100))
+    fib_pct = min(100, round(fiber_ratio * 100))
+    wat_pct = min(100, round(water_ratio * 100))
+    avg7d_pct = min(100, round(avg7d_ratio * 100))
+
     return {
         "today": today,
+        "days_count": days_count,
         "profile": profile,
         "current_weight": current_weight,
         "latest_weight_entry": latest_weight_entry,
         "weight_delta": weight_delta,
+        "current_body_fat": current_body_fat,
+        "body_fat_delta": body_fat_delta,
+        "bf_spark_line": bf_spark_line,
+        "bf_spark_area": bf_spark_area,
+        "bf_segments": bf_segments,
+        "bf_progress_label": bf_progress_label,
         "today_calories": today_calories,
         "today_protein": today_agg["total_protein"] or Decimal("0.0"),
         "today_carbs": today_agg["total_carbs"] or Decimal("0.0"),
         "today_fat": today_agg["total_fat"] or Decimal("0.0"),
         "today_fiber": today_fiber,
         "fiber_goal_g": fiber_goal_g,
-        "fiber_ratio_pct": min(100, round(fiber_ratio * 100)),
+        "fiber_ratio_pct": fib_pct,
         "fiber_segments": build_progress_segments(fiber_ratio),
+        "fiber_progress_label": f"{fib_pct}% · Ziel {fiber_goal_g} g",
         "fiber_spark_line": fiber_spark_line,
         "fiber_spark_area": fiber_spark_area,
         "base_calorie_goal": base_calorie_goal,
@@ -379,13 +446,17 @@ def get_dashboard_context(user) -> dict:
         "calorie_goal": calorie_goal,
         "recommended_tdee": recommended_tdee,
         "remaining_calories": remaining_calories,
-        "calorie_ratio_pct": min(100, round(calorie_ratio * 100)),
+        "calorie_ratio_pct": cal_pct,
         "calorie_segments": build_progress_segments(calorie_ratio),
+        "calorie_progress_label": f"{cal_pct}% · Ziel {calorie_goal} kcal",
         "remaining_segments": build_progress_segments(remaining_ratio),
+        "remaining_progress_label": f"Basis {base_calorie_goal} + Beweg. {today_activity_kcal} kcal",
         "avg7d_segments": build_progress_segments(avg7d_ratio),
-        "avg7d_pct": min(100, round(avg7d_ratio * 100)),
+        "avg7d_pct": avg7d_pct,
+        "avg7d_progress_label": f"{avg7d_pct}% vom Ziel",
         "goal_progress_pct": goal_progress_pct,
         "goal_segments": build_progress_segments((goal_progress_pct or 0) / 100.0) if goal_progress_pct is not None else None,
+        "goal_progress_label": f"Ziel: {profile.target_weight_kg} kg" if profile.target_weight_kg is not None else "",
         "goal_diff_kg": goal_diff_kg,
         "avg_7d_calories": avg_7d_calories,
         "cal_spark_line": cal_spark_line,
@@ -401,8 +472,9 @@ def get_dashboard_context(user) -> dict:
         "water_goal_ml": water_goal_ml,
         "recommended_water_ml": recommended_water_ml,
         "remaining_water_ml": remaining_water_ml,
-        "water_ratio_pct": min(100, round(water_ratio * 100)),
+        "water_ratio_pct": wat_pct,
         "water_segments": build_progress_segments(water_ratio),
+        "water_progress_label": f"{wat_pct}% · Ziel {water_goal_ml} ml",
         "water_spark_line": water_spark_line,
         "water_spark_area": water_spark_area,
         "recent_meals": MealEntry.objects.filter(user=user)[:8],

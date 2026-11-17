@@ -50,6 +50,7 @@ class UserProfileForm(BootstrapFormMixin, forms.ModelForm):
             "activity_level",
             "start_weight_kg",
             "target_weight_kg",
+            "target_body_fat_pct",
             "daily_calorie_goal",
             "daily_water_goal_ml",
             "daily_fiber_goal_g",
