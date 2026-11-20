@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "design_studio",
+    "ops_kit",
     "tracker",
 ]
 
@@ -131,6 +132,7 @@ LOGOUT_REDIRECT_URL = "tracker:login"
 
 # Design Studio Konfiguration
 DESIGN_STUDIO_APP_NAME = "vitaLog"
+OPS_GITHUB_REPO = "bzaiser/vitaLog"
 DESIGN_STUDIO_MENU_ITEMS = [
     {
         "id": "dashboard",
@@ -196,21 +198,11 @@ DESIGN_STUDIO_MENU_ITEMS = [
         "id": "profile",
         "url_name": "tracker:profile",
         "match_urls": ["profile"],
-        "default_label": "Profil",
+        "default_label": "Einstellungen",
         "icon": "bi-gear",
         "zone": "utility",
-        "display": "icon_text",
-        "order": 1,
-    },
-    {
-        "id": "design_studio",
-        "url_name": "design_studio:studio",
-        "match_urls": ["studio"],
-        "default_label": "Design Studio",
-        "icon": "bi-palette",
-        "zone": "utility",
         "display": "icon_only",
-        "order": 2,
+        "order": 1,
         "locked": True,
     },
     {

@@ -648,15 +648,18 @@ def profile_view(request):
     else:
         form = UserProfileForm(instance=profile)
 
-    return render(
-        request,
-        "tracker/profile.html",
-        {
-            "form": form,
-            "profile": profile,
-            "latest_weight": latest_weight,
-            "recommended_tdee": recommended_tdee,
-            "recommended_water_ml": recommended_water_ml,
-            "recommended_fiber_g": recommended_fiber_g,
-        },
-    )
+    ctx = {
+        "form": form,
+        "profile": profile,
+        "latest_weight": latest_weight,
+        "recommended_tdee": recommended_tdee,
+        "recommended_water_ml": recommended_water_ml,
+        "recommended_fiber_g": recommended_fiber_g,
+    }
+    if request.user.is_staff:
+        try:
+            from ops_kit.views import get_updates_context
+            ctx.update(get_updates_context())
+        except Exception:
+            pass
+    return render(request, "tracker/profile.html", ctx)

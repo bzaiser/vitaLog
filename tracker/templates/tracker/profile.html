@@ -21,8 +21,31 @@
     </div>
 </div>
 
+{% url 'ops_kit:updates' as ops_updates_url %}
+<ul class="nav folder-tabs-bar mb-0" id="profileHubTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="tab-profile-btn" data-bs-toggle="tab" data-bs-target="#pane-profile" type="button" role="tab" aria-controls="pane-profile" aria-selected="true">
+            <i class="bi bi-person-vcard me-1"></i>Stammdaten &amp; Ziele
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-design-btn" data-bs-toggle="tab" data-bs-target="#pane-design" type="button" role="tab" aria-controls="pane-design" aria-selected="false">
+            <i class="bi bi-palette me-1"></i>Design &amp; Menü
+        </button>
+    </li>
+    {% if request.user.is_staff and ops_updates_url %}
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-updates-btn" data-bs-toggle="tab" data-bs-target="#pane-updates" type="button" role="tab" aria-controls="pane-updates" aria-selected="false">
+            <i class="bi bi-cloud-download me-1"></i>Auto-Updates
+        </button>
+    </li>
+    {% endif %}
+</ul>
+
+<div class="tab-content ds-tab-panel p-3 p-md-4" id="profileHubTabContent">
+<div class="tab-pane fade show active" id="pane-profile" role="tabpanel" aria-labelledby="tab-profile-btn">
 <div class="row g-4">
-    <div class="col-lg-7">
+    <div class="col-12">
         <div class="card shadow-sm rounded-4 overflow-hidden h-100">
             <div class="card-header border-0 py-2 px-3 fw-bold">
                 <i class="bi bi-person-vcard me-2"></i>Stammdaten &amp; Ziele ({{ request.user.username }})
@@ -146,45 +169,54 @@
             </div>
         </div>
     </div>
-
-    <div class="col-lg-5">
-        <div class="card shadow-sm rounded-4 overflow-hidden h-100">
-            <div class="card-header border-0 py-2 px-3 fw-bold">
-                <i class="bi bi-palette me-2"></i>Design Studio &amp; Darstellung
-            </div>
-            <div class="card-body d-flex flex-column justify-content-between">
-                <div>
-                    <p class="text-muted small">
-                        Passe Farbpalette, Stimmung, Tag-/Nachtmodus, Karten-Oberflächen und die Menü-Anordnung individuell für dein Konto an.
-                    </p>
-                    <ul class="list-group list-group-flush mb-4">
-                        <li class="list-group-item d-flex justify-content-between px-0">
-                            <span class="text-muted">Aktuelle Stimmung</span>
-                            <span class="fw-semibold text-capitalize">{{ theme_studio.mood|default:"modern" }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between px-0">
-                            <span class="text-muted">Modus</span>
-                            <span class="fw-semibold">{% if theme_palette and theme_palette.is_dark %}Nachtmodus{% else %}Tagmodus{% endif %}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between px-0">
-                            <span class="text-muted">Menü-Layout</span>
-                            <span class="fw-semibold text-capitalize">{{ theme_studio.menu_layout|default:"navbar" }}</span>
-                        </li>
-                    </ul>
-                </div>
-                <div class="d-grid gap-2">
-                    <a href="{% url 'design_studio:studio' %}?next={% url 'tracker:profile' %}" class="btn btn-primary">
-                        <i class="bi bi-palette me-1"></i>Design Studio öffnen
-                    </a>
-                    <a href="{% url 'design_studio:toggle_night' %}" class="btn btn-outline-secondary">
-                        <i class="bi bi-moon-stars me-1"></i>Tag-/Nachtmodus umschalten
-                    </a>
-                    <a href="{% url 'design_studio:export' %}" class="btn btn-outline-secondary">
-                        <i class="bi bi-download me-1"></i>Theme als JSON exportieren
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
+</div><!-- /pane-profile -->
+
+<div class="tab-pane fade" id="pane-design" role="tabpanel" aria-labelledby="tab-design-btn">
+    {% url 'tracker:profile' as profile_url %}
+    {% with ds_studio_next=profile_url|add:"?tab=design" %}
+        {% include "design_studio/partials/studio_content.html" %}
+    {% endwith %}
+</div>
+
+{% if request.user.is_staff and ops_updates_url %}
+<div class="tab-pane fade" id="pane-updates" role="tabpanel" aria-labelledby="tab-updates-btn">
+    {% url 'tracker:profile' as profile_url %}
+    {% if cfg %}
+        {% with ops_updates_next=profile_url|add:"?tab=updates" %}
+            {% include "ops_kit/partials/updates_content.html" %}
+        {% endwith %}
+    {% else %}
+        <div class="alert alert-warning mb-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <span>Auto-Updates noch nicht initialisiert (bitte ops-django-kit aktualisieren und manage.py migrate ausführen).</span>
+            <a href="{{ ops_updates_url }}" class="btn btn-sm btn-primary rounded-pill px-3">Direkt öffnen</a>
+        </div>
+    {% endif %}
+</div>
+{% endif %}
+</div><!-- /tab-content -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('#profileHubTabs button[data-bs-toggle="tab"]').forEach(function (btn) {
+        btn.addEventListener('shown.bs.tab', function (ev) {
+            const id = ev.target.id || '';
+            const m = id.match(/^tab-(.+)-btn$/);
+            if (m && window.history && window.history.replaceState) {
+                const url = new URL(window.location.href);
+                if (m[1] === 'profile') url.searchParams.delete('tab');
+                else url.searchParams.set('tab', m[1]);
+                window.history.replaceState(null, '', url.toString());
+            }
+        });
+    });
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab) {
+        const btn = document.getElementById('tab-' + tab + '-btn');
+        if (btn && window.bootstrap && bootstrap.Tab) {
+            bootstrap.Tab.getOrCreateInstance(btn).show();
+        }
+    }
+});
+</script>
 {% endblock %}
