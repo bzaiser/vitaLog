@@ -9,7 +9,14 @@ services:
     volumes:
       - .:/app
       - ./data:/app/data
+      - ds_pkg:/opt/ds-pkg
+    environment:
+      - PYTHONPATH=/opt/ds-pkg
+      - DESIGN_STUDIO_TARGET=/opt/ds-pkg
     command: >
       sh -c "python manage.py collectstatic --noinput &&
              python manage.py migrate --noinput &&
              exec $${START_COMMAND:-gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --threads 2}"
+
+volumes:
+  ds_pkg:

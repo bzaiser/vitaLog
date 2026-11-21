@@ -38,6 +38,12 @@ INSTALLED_APPS = [
     "tracker",
 ]
 
+try:
+    from ops_kit.runtime import apply_runtime_installed_apps
+    apply_runtime_installed_apps(INSTALLED_APPS, BASE_DIR)
+except ImportError:
+    pass
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",

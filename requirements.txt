@@ -1,8 +1,8 @@
 Django>=5.0,<7.0
-git+https://github.com/bzaiser/django-design-studio.git@main
-git+https://github.com/bzaiser/ops-django-kit.git@main
-git+https://github.com/bzaiser/domain-django-kit.git@main
-git+https://github.com/bzaiser/cal-django-kit.git@main
+https://github.com/bzaiser/django-design-studio/archive/refs/heads/main.zip
+https://github.com/bzaiser/ops-django-kit/archive/refs/heads/main.zip
+https://github.com/bzaiser/domain-django-kit/archive/refs/heads/main.zip
+https://github.com/bzaiser/cal-django-kit/archive/refs/heads/main.zip
 gunicorn>=22.0
 whitenoise>=6.6
 psycopg[binary]>=3.1
