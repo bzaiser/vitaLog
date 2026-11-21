@@ -1,6 +1,7 @@
 services:
   web:
     build: .
+    restart: unless-stopped
     ports:
       - "${APP_PORT:-8012}:8000"
     env_file:
@@ -11,4 +12,4 @@ services:
     command: >
       sh -c "python manage.py collectstatic --noinput &&
              python manage.py migrate --noinput &&
-             ${START_COMMAND:-gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --threads 2}"
+             exec $${START_COMMAND:-gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --threads 2}"
